@@ -1,0 +1,130 @@
+package aeonics.entity;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import aeonics.data.Data;
+import aeonics.entity.security.User;
+import aeonics.manager.Logger;
+import aeonics.manager.Manager;
+import aeonics.manager.Monitor;
+import aeonics.manager.Security;
+import aeonics.template.Item;
+import aeonics.template.Parameter;
+import aeonics.template.Relationship;
+import aeonics.template.Template;
+import aeonics.util.StringUtils;
+import aeonics.util.Tuple;
+
+/**
+ * This class represents a publishing topic for messages.
+ * A {@link Queue} can subscribe to a topic by providing a binding key. 
+ * The mechanism to subscribe to a topic depends on the implementation.
+ */
+public class Topic extends Item<Topic.Type>
+{
+	public static class Type extends Entity
+	{
+		/**
+		 * Publishes a message on this topic.
+		 * The message will be delivered to all queues with a matching subscription.
+		 * @param message the message to deliver
+		 */
+		public void publish(Message message)
+		{
+			if( message == null ) return;
+			
+			User.Type user = Registry.of(User.class).get(message.user());
+			if( !Manager.of(Security.class).granted(user == null ? User.ANONYMOUS : user, "topic", Data.map().put("message", message).put("topic", id())) )
+				throw new SecurityException("Access denied");
+			
+			Manager.of(Monitor.class).count(this);
+
+			// implement the relationship iteration manually
+			// to avoid creating iterator instances
+			
+			Tuple<List<Data>, Relationship> r = this.relationships().get("queues");
+			if( r == null || r.a.isEmpty() ) return;
+			
+			String key = message.key();
+			if( r.a.size() == 1 )
+			{
+				Data data = r.a.get(0);
+				if( StringUtils.simplePathMatches(data.asString("binding"), key) )
+				{
+					Queue.Type q = Registry.of(Queue.class).get(data.asString("id"));
+					if( q != null )
+					{
+						try { q.accept(message); }
+						catch(Exception e)
+						{
+							Manager.of(Logger.class).severe(Queue.class, e);
+							Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
+							// TODO : discard ?
+						}
+					}
+				}
+				else
+				{
+					Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
+					// TODO : discard ?
+				}
+			}
+			else
+			{
+				List<Queue.Type> matches = new ArrayList<Queue.Type>(); 
+				for( Data data : r.a )
+				{
+					if( StringUtils.simplePathMatches(data.asString("binding"), key) )
+					{
+						Queue.Type q = Registry.of(Queue.class).get(data.asString("id"));
+						if( q != null ) matches.add(q);
+					}
+				}
+				
+				if( matches.isEmpty() )
+				{
+					Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
+					// TODO : discard ?
+				}
+				
+				for( int i = matches.size()-1; i >= 0 ; i-- )
+				{
+					try { matches.get(i).accept(i > 0 ? message.clone() : message); }
+					catch(Exception e)
+					{
+						Manager.of(Logger.class).severe(Queue.class, e);
+						Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
+						// TODO : discard ?
+					}
+				}
+			}
+		}
+		
+		/**
+		 * Hardcoded category to the {@link Topic} class
+		 */
+		@Override
+		public final String category() { return StringUtils.toLowerCase(Topic.class); }
+	}
+	
+	protected Class<? extends Topic.Type> defaultTarget() { return Topic.Type.class; }
+	protected Supplier<? extends Topic.Type> defaultCreator() { return Topic.Type::new; }
+	protected Class<? extends Topic> category() { return Topic.class; }
+
+	@Override
+	public Template<? extends Topic.Type> template()
+	{
+		return super.template()
+			.summary("Topic")
+			.description("Dispatches messages to subscribed queues.")
+			.add(new Relationship("queues")
+				.category(Queue.class)
+				.summary("Queues")
+				.description("The list of subscriptions.")
+				.add(new Parameter("binding")
+					.summary("Subscription binding key")
+					.description("The subscription key allows to filter the messages that the queue will receive.")));
+	}
+}
