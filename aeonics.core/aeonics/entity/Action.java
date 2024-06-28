@@ -50,7 +50,7 @@ import aeonics.util.StringUtils;
  * Action.Type action = new Action() { } // &lt;-- note the '{ }' to create a new anonymous class
  *     
  *     // register the custom entity before calling the template
- *     .entity(MyEntity.class)
+ *     .target(MyEntity.class)
  *     .creator(MyEntity::new)
  *     
  *     .template() // &lt;-- create the template and register it in the factory
@@ -77,20 +77,24 @@ public abstract class Action extends Item<Action.Type>
 				.description("List of action entities that are directly connected to this queue.")
 				.add(new Parameter("input")
 					.summary("Input Channel")
-					.description("The name of the input channel of the target action."))
+					.description("The name of the input channel of the target action.")
+					.format(Parameter.Format.TEXT))
 				.add(new Parameter("output")
 					.summary("Output Channel")
-					.description("The name of the input channel to which this action is bound.")));
+					.description("The name of the input channel to which this action is bound.")
+					.format(Parameter.Format.TEXT)));
 			add(new Relationship("destinations")
 				.category(Destination.class)
 				.summary("Linked Destinations")
 				.description("List of destination entities that are directly connected to this queue.")
 				.add(new Parameter("input")
 					.summary("Input Channel")
-					.description("The name of the input channel of the target destination."))
+					.description("The name of the input channel of the target destination.")
+					.format(Parameter.Format.TEXT))
 				.add(new Parameter("output")
 					.summary("Output Channel")
-					.description("The name of the input channel to which this action is bound.")));
+					.description("The name of the input channel to which this action is bound.")
+					.format(Parameter.Format.TEXT)));
 		}
 		
 		/**

@@ -152,6 +152,9 @@ public abstract class Provider extends Item<Provider.Type>
 			.add(new Parameter("active")
 				.summary("Active")
 				.description("Whether or not this provider is active")
+				.rule(Parameter.Rule.BOOLEAN)
+				.format(Parameter.Format.BOOLEAN)
+				.optional(true)
 				.defaultValue(Data.of(true)))
 			.builder((data, instance) -> 
 			{
@@ -295,6 +298,8 @@ public abstract class Provider extends Item<Provider.Type>
 					.summary("Password policy complexity")
 					.description("Enforce the password complexity to be above the specified threshold of possible combinations.")
 					.defaultValue(Data.of(10_000_000_000_000_000L))
+					.format(Parameter.Format.NUMBER)
+					.rule(Parameter.Rule.DIGIT)
 					)
 				;
 		}

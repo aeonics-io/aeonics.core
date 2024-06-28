@@ -98,6 +98,25 @@ public abstract class Config extends Manager.Type
 	}
 	
 	/**
+	 * Returns the parameter definition for the target entity type.
+	 * @param type the entity type
+	 * @param parameter the parameter name
+	 * @return the parameter definition or null if the parameter is not found
+	 */
+	public abstract Parameter definition(String type, String parameter);
+	
+	/**
+	 * Returns the parameter definition for the target entity type.
+	 * @param type the entity type
+	 * @param parameter the parameter name
+	 * @return the parameter definition or null if the parameter is not found
+	 */
+	public Parameter definition(Class<?> type, String parameter)
+	{
+		return definition(StringUtils.toLowerCase(type), parameter);
+	}
+	
+	/**
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
 	 * @param type the entity type (should be or will be converted to lower case)
 	 * @param name the name of the configuration parameter

@@ -4,7 +4,6 @@ import java.util.function.Supplier;
 
 import aeonics.data.Data;
 import aeonics.entity.Entity;
-import aeonics.entity.Registry;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.manager.Security;
@@ -13,6 +12,7 @@ import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
 import aeonics.util.StringUtils;
+import aeonics.util.Tuple;
 
 /**
  * This item plays a role in the definition of the {@link Security}.
@@ -69,7 +69,8 @@ public abstract class Policy extends Item<Policy.Type>
 		return super.template()
 			.add(new Parameter("scope")
 				.summary("Scope")
-				.description("The scope to which this policy applies. The scope will be used as a filter to select applicable policies."))
+				.description("The scope to which this policy applies. The scope will be used as a filter to select applicable policies.")
+				.format(Parameter.Format.TEXT))
 			.add(new Relationship("rule")
 				.category(Rule.class)
 				.summary("Rule")
@@ -101,9 +102,9 @@ public abstract class Policy extends Item<Policy.Type>
 				
 				try
 				{
-					for( Data d : relationships().get("rule").a )
+					for( Tuple<Entity, Data> rules : relations("rule") )
 					{
-						Rule.Type rule = Registry.of(Rule.class).get(d.asString("id"));
+						Rule.Type rule = rules.a.cast();
 						if( rule != null )
 							return rule.test(user, context);
 					}
@@ -144,9 +145,9 @@ public abstract class Policy extends Item<Policy.Type>
 				
 				try
 				{
-					for( Data d : relationships().get("rule").a )
+					for( Tuple<Entity, Data> rules : relations("rule") )
 					{
-						Rule.Type rule = Registry.of(Rule.class).get(d.asString("id"));
+						Rule.Type rule = rules.a.cast();
 						if( rule != null )
 							return rule.test(user, context);
 					}
@@ -207,38 +208,37 @@ public abstract class Policy extends Item<Policy.Type>
 				
 				// 1. USER IS REFERENCED
 				String id = user.id();
-				for( Data u : relationships().get("users").a )
-					if( id.equals(u.asString("id")) )
+				for( Tuple<Entity, Data> users : relations("users") )
+					if( users.a != null && id.equals(users.a.id()) )
 						return true;
 				
 				// 2. USER->ROLE IS REFERENCED
-				for( Data r : relationships().get("roles").a )
+				for( Tuple<Entity, Data> roles : relations("roles") )
 				{
-					id = r.asString("id");
-					for( Data ur : user.relationships().get("roles").a )
-						if( id.equals(ur.asString("id")) )
+					if( roles.a == null ) continue;
+					id = roles.a.id();
+					for( Tuple<Entity, Data> userroles : user.relations("roles") )
+						if( userroles.a != null && id.equals(userroles.a.id()) )
 							return true;
 				}
 				
 				// 3. USER->GROUP IS REFERENCED
-				for( Data g : relationships().get("groups").a )
+				for( Tuple<Entity, Data> groups : relations("groups") )
 				{
-					id = g.asString("id");
-					for( Data ug : user.relationships().get("groups").a )
-						if( id.equals(ug.asString("id")) )
+					if( groups.a == null ) continue;
+					id = groups.a.id();
+					for( Tuple<Entity, Data> usergroups : user.relations("groups") )
+						if( usergroups.a != null && id.equals(usergroups.a.id()) )
 							return true;
 					
 					// 4. USER->GROUP->ROLE IS REFERENCED
-					Group.Type group = Registry.of(Group.class).get(id);
-					if( group != null )
+					for( Tuple<Entity, Data> roles : relations("roles") )
 					{
-						for( Data r : relationships().get("roles").a )
-						{
-							id = r.asString("id");
-							for( Data gr : group.relationships().get("roles").a )
-								if( id.equals(gr.asString("id")) )
-									return true;
-						}
+						if( roles.a == null ) continue;
+						id = roles.a.id();
+						for( Tuple<Entity, Data> grouproles : groups.a.relations("roles") )
+							if( grouproles.a != null && id.equals(grouproles.a.id()) )
+								return true;
 					}
 				}
 				
@@ -285,9 +285,9 @@ public abstract class Policy extends Item<Policy.Type>
 				
 				try
 				{
-					for( Data d : relationships().get("rule").a )
+					for( Tuple<Entity, Data> rules : relations("rule") )
 					{
-						Rule.Type rule = Registry.of(Rule.class).get(d.asString("id"));
+						Rule.Type rule = rules.a.cast();
 						if( rule != null )
 							return rule.test(user, context);
 					}
@@ -330,9 +330,9 @@ public abstract class Policy extends Item<Policy.Type>
 				
 				try
 				{
-					for( Data d : relationships().get("rule").a )
+					for( Tuple<Entity, Data> rules : relations("rule") )
 					{
-						Rule.Type rule = Registry.of(Rule.class).get(d.asString("id"));
+						Rule.Type rule = rules.a.cast();
 						if( rule != null )
 							return rule.test(user, context);
 					}

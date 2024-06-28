@@ -27,7 +27,9 @@ public class Relationship implements Documented
 		
 		add(new Parameter("id")
 			.summary("The related entity id.")
-			.description("The related entity id. The related entity will be fetched from the Registry when needed."));
+			.description("The related entity id. The related entity will be fetched from the Registry when needed.")
+			.optional(false)
+			.format(Parameter.Format.TEXT));
 	}
 	
 	/**

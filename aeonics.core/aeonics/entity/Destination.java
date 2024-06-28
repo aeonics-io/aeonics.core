@@ -46,7 +46,7 @@ import aeonics.util.StringUtils;
  * Destination.Type item = new Destination() { } // &lt;-- note the '{ }' to create a new anonymous class
  *     
  *     // register the custom entity before calling the template
- *     .entity(MyEntity.class)
+ *     .target(MyEntity.class)
  *     .creator(MyEntity::new)
  *     
  *     .template() // &lt;-- create the template and register it in the factory

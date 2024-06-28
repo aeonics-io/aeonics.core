@@ -9,6 +9,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import aeonics.entity.Origin;
+import aeonics.template.Factory;
+import aeonics.template.Template;
+import aeonics.util.Internal;
 
 /**
  * Manages the execution of tasks accross the system.
@@ -343,4 +346,45 @@ public abstract class Executor extends Manager.Type
 		 */
 		public void cancel() { future.cancel(true); }
 	}
+
+	/**
+	 * Default initial execurot template and entity implementation
+	 */
+	private static final class SynchronousExecutor extends Manager<Executor>
+	{
+		private static class Implementation extends Executor
+		{
+			@Override
+			public <T> Task<T> priority(Supplier<T> task) { return normal(task); }
+
+			@Override
+			public <T> Task<T> normal(Supplier<T> task) { return Task.completed(task.get()); }
+
+			@Override
+			public <T> Task<T> background(Supplier<T> task) { return normal(task); }
+
+			@Override
+			public <T> Task<T> io(Supplier<T> task) { return normal(task); }
+		}
+
+		@Override
+		public Template<? extends Executor> template()
+		{
+			return new Template<Executor>(target(), type(), category())
+				.creator(creator())
+				.summary("Synchronous executor")
+				.description("Executes all tasks immediately and synchronously in the calling thread.");
+		}
+		
+		protected Class<? extends SynchronousExecutor.Implementation> defaultTarget() { return SynchronousExecutor.Implementation.class; }
+		protected Supplier<? extends SynchronousExecutor.Implementation> defaultCreator() { return SynchronousExecutor.Implementation::new; }
+	}
+	
+	/**
+	 * Default synchronous executor.
+	 * This is used when the actual executor is not (yet/longer) available
+	 * @hidden
+	 */
+	@Internal
+	public static final Executor SYNCHRONOUS = Manager.set(Executor.class, Factory.add(new SynchronousExecutor()).build().name("Synchronous Executor"));
 }

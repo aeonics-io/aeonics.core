@@ -1,11 +1,15 @@
 package aeonics.entity;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import aeonics.data.Data;
 import aeonics.manager.Config;
@@ -13,6 +17,7 @@ import aeonics.template.Factory;
 import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
+import aeonics.util.Callback;
 import aeonics.util.Exportable;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
@@ -266,18 +271,28 @@ public class Entity implements Exportable
 	/**
 	 * The list of entity relationships.
 	 */
-	private Map<String, Tuple<List<Data>, Relationship>> relationships = new HashMap<String, Tuple<List<Data>, Relationship>>();
+	private Map<String, Tuple<List<Data>, Relationship>> relationships = new ConcurrentHashMap<String, Tuple<List<Data>, Relationship>>();
 	
 	/**
 	 * Returns the list of relationships of this entity instance.
 	 * @return the list of relationships
-	 * @hidden
 	 */
-	@Internal
-	public Map<String, Tuple<List<Data>, Relationship>> relationships() { return relationships; }
+	public Set<String> relationships() { return Collections.unmodifiableSet(relationships.keySet()); }
+	
+	/**
+	 * Defines a new relationship for this entity.
+	 * @param value the relationship
+	 * @throws IllegalArgumentException if the relationship already exists
+	 */
+	public void defineRelation(Relationship value)
+	{
+		if( relationships.putIfAbsent(value.name(), Tuple.of(new LinkedList<Data>(), value)) != null )
+			throw new IllegalArgumentException("Duplicate relationship");
+	}
 	
 	/**
 	 * Fetches all related entities from the registry along with the relation properties.
+	 * The returned iteratory may include null entity component.
 	 * @param <R> The related entity type
 	 * @param name the name of the relationship
 	 * @return an iterable list of all related entities and the relation properties
@@ -285,6 +300,8 @@ public class Entity implements Exportable
 	public <R extends Entity> Iterable<Tuple<R, Data>> relations(String name)
 	{
 		Tuple<List<Data>, Relationship> r = relationships.get(name);
+		if( r == null ) return Collections.emptyList();
+		
 		Iterator<Data> i = r.a.iterator();
 		return () ->
 		{		
@@ -326,6 +343,25 @@ public class Entity implements Exportable
 		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
 		if( r == null ) throw new IllegalArgumentException("Invalid relationship name");
 		return addRelation(relationship, Registry.of(StringUtils.toLowerCase(r.b.category())).get(entity), null);
+	}
+	
+	/**
+	 * Adds a relation to the provided entity without any parameter or entity existence checks
+	 * @param relationship the relationship name
+	 * @param entity the related entity id
+	 * @param parameters the relationship parameters as a data object
+	 * @return this for chaining
+	 * @throws IllegalArgumentException if the relationship does not exist
+	 * @hidden
+	 */
+	@Internal
+	public Entity addUncheckedRelation(String relationship, String entity, Data parameters)
+	{
+		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
+		if( r == null ) throw new IllegalArgumentException("Invalid relationship name");
+		
+		r.a.add(parameters.put("id", entity));
+		return this;
 	}
 	
 	/**
@@ -394,6 +430,16 @@ public class Entity implements Exportable
 	}
 	
 	/**
+	 * Clears all related entities for the specified relationship
+	 * @param relationship the relationship name
+	 */
+	public void clearRelation(String relationship)
+	{
+		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
+		if( r != null ) r.a.clear();
+	}
+	
+	/**
 	 * This method is a callback function that will be called by the {@link Config} manager when the configured value changes.
 	 * The registration is usually performed by the {@link Template} that creates new instance of entities, but it can also
 	 * be done manually using the {@link Config#watch(String, aeonics.entity.security.Functions.BiConsumer)} method.
@@ -402,6 +448,44 @@ public class Entity implements Exportable
 	 * @param value the new value
 	 */
 	public void config(String key, Data value) { /* can be overridden */ }
+	
+	/**
+	 * The onRemove event callback
+	 */
+	private Callback<Void> onRemove = new Callback<>();
+	
+	/**
+	 * Event callback called when the entity is removed from the registry.
+	 * This is supposed to happen only once.
+	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * @return the onRemove event handler
+	 */
+	public Callback<Void> onRemove() { return onRemove; }
+	
+	/**
+	 * The onUpdate event callback
+	 */
+	private Callback<Void> onUpdate = new Callback<>();
+	
+	/**
+	 * Event callback called when the entity has been updated by the template.
+	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * @return the onUpdate event handler
+	 */
+	public Callback<Void> onUpdate() { return onUpdate; }
+	
+	/**
+	 * The onCreate event callback
+	 */
+	private Callback<Void> onCreate = new Callback<>();
+	
+	/**
+	 * Event callback called when the entity has been created by the template.
+	 * This is supposed to happen only once.
+	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * @return the onCreate event handler
+	 */
+	public Callback<Void> onCreate() { return onCreate; }
 	
 	public Data export()
 	{

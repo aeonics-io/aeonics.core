@@ -37,7 +37,7 @@ import aeonics.util.Tuple;
  * Origin.Type item = new Origin() { } // &lt;-- note the '{ }' to create a new anonymous class
  *     
  *     // specify which variant to use
- *     .entity(Origin.Background.class)
+ *     .target(Origin.Background.class)
  *     .creator(Origin.Background::new)
  *     
  *     .template() // &lt;-- create the template and register it in the factory
@@ -63,7 +63,7 @@ import aeonics.util.Tuple;
  * Origin.Type item = new Origin() { } // &lt;-- note the '{ }' to create a new anonymous class
  *     
  *     // register the custom entity before calling the template
- *     .entity(MyEntity.class)
+ *     .target(MyEntity.class)
  *     .creator(MyEntity::new)
  *     
  *     .template() // &lt;-- create the template and register it in the factory
@@ -91,6 +91,7 @@ public abstract class Origin extends Item<Origin.Type>
 				.add(new Parameter("channel")
 					.summary("Channel")
 					.description("The name of the output channel to which this topic is bound.")
+					.format(Parameter.Format.TEXT)
 				)
 			);
 		}
@@ -148,21 +149,15 @@ public abstract class Origin extends Item<Origin.Type>
 			
 			Manager.of(Monitor.class).count(this);
 			
-			// implement the relationship iteration manually
-			// to avoid creating iterator instances
-			
-			Tuple<List<Data>, Relationship> r = this.relationships().get("topics");
-			if( r == null || r.a.isEmpty() ) return;
-			
-			if( r.a.size() == 1 )
+			boolean shouldClone = false;
+			for( Tuple<Entity, Data> relation : this.relations("topics") )
 			{
-				Data data = r.a.get(0);
-				if( channel.equals(data.asString("channel")) )
+				if( channel.equals(relation.b.asString("channel")) )
 				{
-					Topic.Type t = Registry.of(Topic.class).get(data.asString("id"));
+					Topic.Type t = relation.a.cast();
 					if( t != null )
 					{
-						try { t.publish(message); }
+						try { t.publish(shouldClone ? message.clone() : message); shouldClone = true; }
 						catch(Exception e)
 						{
 							Manager.of(Logger.class).severe(Topic.class, e);
@@ -172,35 +167,6 @@ public abstract class Origin extends Item<Origin.Type>
 					}
 					else
 					{
-						Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-						// TODO : discard ?
-					}
-				}
-			}
-			else
-			{
-				List<Topic.Type> matches = new ArrayList<Topic.Type>(); 
-				for( Data data : r.a )
-				{
-					if( channel.equals(data.asString("binding")) )
-					{
-						Topic.Type t = Registry.of(Topic.class).get(data.asString("id"));
-						if( t != null ) matches.add(t);
-					}
-				}
-				
-				if( matches.isEmpty() )
-				{
-					Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-					// TODO : discard ?
-				}
-				
-				for( int i = matches.size()-1; i >= 0 ; i-- )
-				{
-					try { matches.get(i).publish(i > 0 ? message.clone() : message); }
-					catch(Exception e)
-					{
-						Manager.of(Logger.class).severe(Queue.class, e);
 						Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
 						// TODO : discard ?
 					}

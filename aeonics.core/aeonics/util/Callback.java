@@ -33,10 +33,12 @@ import aeonics.manager.Manager;
  * MyClass i = new MyClass();
  * Consumer&lt;?&gt; handler = (value) -&gt; { i.something(); };
  * callback.then(handler);
+ * ...
  * i = null;
  * callback.remove(handler);
  * 
  * </pre>
+ * <p>Consider using one of the {@link #once(Consumer)} variants for handlers that should execute only once.</p>
  * @param <T> the value type
  */
 public class Callback<T>
@@ -110,17 +112,18 @@ public class Callback<T>
 	 */
 	public Task<Void> trigger(T value)
 	{
+		if( handlers.size() == 0 ) return Task.completed(null);
+		
 		// perform a shallow copy so that handlers added or removed during execution
 		// do not cause troubles
 		List<Consumer<T>> cache = new ArrayList<>(handlers);
-		
 		return Manager.of(Executor.class).normal(() ->
 		{
 			for( Consumer<T> h : cache )
 			{
 				if( h == null ) continue;
 				
-				try { h.accept(value); } catch(Throwable t) { Manager.of(Logger.class).warning(Callback.class, t); }
+				try { h.accept(value); } catch(Throwable t) { t.printStackTrace(); Manager.of(Logger.class).warning(Callback.class, t); }
 				finally { if( h instanceof Once ) remove(h); }
 			}
 		});

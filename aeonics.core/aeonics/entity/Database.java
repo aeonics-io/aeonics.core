@@ -56,7 +56,7 @@ import aeonics.util.StringUtils;
  * Database.Type action = new Database() { } // &lt;-- note the '{ }' to create a new anonymous class
  *     
  *     // register the custom entity before calling the template
- *     .entity(MyEntity.class)
+ *     .target(MyEntity.class)
  *     .creator(MyEntity::new)
  *     
  *     .template() // &lt;-- create the template and register it in the factory
@@ -756,6 +756,9 @@ public abstract class Database extends Item<Database.Type>
 			.add(new Parameter("size")
 				.summary("Maximum number of connections")
 				.description("The maximum number of simultaneous connections to the database. Connections will only be established on-demand up to this limit.")
+				.rule(Parameter.Rule.DIGIT)
+				.format(Parameter.Format.NUMBER)
+				.optional(true)
 				.defaultValue(Data.of(1)))
 			;
 	}

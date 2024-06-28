@@ -18,7 +18,7 @@ import aeonics.util.StringUtils;
  */
 public class Role extends Item<Role.Type>
 {
-	public static final Role.Type SUPERADMIN = new Role().template().build(Data.map().put("__internal", true).put("__id", "SUPERADMIN")).name("SUPERADMIN");
+	public static final Role.Type SUPERADMIN = new Role().template().build(Data.map().put("__internal", true).put("__id", "10000000-2100000000000000")).name("SUPERADMIN");
 	
 	/**
 	 * Superclass for all role entities.
@@ -45,6 +45,9 @@ public class Role extends Item<Role.Type>
 			.add(new Parameter("attributes")
 				.summary("Attributes")
 				.description("Additional attributes common to all users with this role.")
+				.rule(Parameter.Rule.JSON_MAP)
+				.format(Parameter.Format.JSON)
+				.optional(true)
 				.defaultValue(Data.map())
 				.validator(Data::isMap))
 			;

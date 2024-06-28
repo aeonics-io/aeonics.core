@@ -2,6 +2,8 @@ package aeonics.template;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -60,6 +62,27 @@ public class Parameter implements Documented
 	 * @return this
 	 */
 	public <P extends Parameter> P summary(String value) { summary = value; return (P)this; }
+	
+	/**
+	 * The parameter expected format
+	 */
+	private String format = "text";
+	/**
+	 * Returns the parameter expected format.
+	 * The parameter format is just an indication on how the parameter should be formatted and/or displayed to the user.
+	 * There is no automatic {@link #rule()} that match the format, you should set both. 
+	 * @return the parameter expected format
+	 */
+	public String format() { return format; }
+	/**
+	 * Sets the parameter expected format.
+	 * The parameter format is just an indication on how the parameter should be formatted and/or displayed to the user.
+	 * There is no automatic {@link #rule()} that match the format, you should set both. 
+	 * @param <P> this parameter type
+	 * @param value the expected format
+	 * @return this
+	 */
+	public <P extends Parameter> P format(String value) { format = value; return (P)this; }
 	
 	/**
 	 * The parameter description
@@ -123,6 +146,7 @@ public class Parameter implements Documented
 		if( s.length() == 0 && !optional() ) return false;
 		if( s.length() == 0 && optional() ) return true;
 		if( s.length() < min() || s.length() > max() ) return false;
+		if( values().size() > 0 && !values().contains(s) ) return false;
 		if( rule() != null ) return rule().test(s);
 		return true;
 	};
@@ -130,7 +154,7 @@ public class Parameter implements Documented
 	/**
 	 * Returns the validator for this parameter.
 	 * <p>The default validator is checking the <code>toString()</code> representation with
-	 * regard to the {@link #defaultValue()}, {@link #optional()}, {@link #min()}, {@link #max()} and {@link #rule()}.</p>
+	 * regard to the {@link #defaultValue()}, {@link #optional()}, {@link #min()}, {@link #max()}, {@link #values()} and {@link #rule()}.</p>
 	 * <p>If you need a custom validation, then you should set one using {@link #validator(Predicate)}.</p> 
 	 * @return the validator for this parameter
 	 */
@@ -138,6 +162,7 @@ public class Parameter implements Documented
 	
 	/**
 	 * Sets the validator for this parameter.
+	 * <p>This method will replace the default validator so no other checks other than the one provided will be performed.</p>
 	 * @param <P> this parameter type
 	 * @param value the validator for this parameter
 	 * @return this
@@ -273,6 +298,22 @@ public class Parameter implements Documented
 	 * @return this
 	 */
 	public Parameter max(int value) { this.max = value; return this; }
+	
+	/**
+	 * Set of acceptable values
+	 */
+	private Set<String> values = new HashSet<>();
+	/**
+	 * Returns the set of acceptable values
+	 * @return the set of acceptable values
+	 */
+	public Set<String> values() { return values; }
+	/**
+	 * Sets the acceptable values. This method overrides the existing acceptables values with the ones provided.
+	 * @param values the acceptable values
+	 * @return this
+	 */
+	public Parameter values(String... values) { for( String v : values ) this.values.add(v); return this; }
 
 	/**
 	 * Specific validation rule
@@ -305,103 +346,133 @@ public class Parameter implements Documented
 			.put("optional", optional())
 			.put("min", min())
 			.put("max", max())
+			.put("format", format())
+			.put("values", values())
 			.put("rule", rule != null);
 	}
 	
 	/**
-	 * Rule for upper case A-Z
+	 * This class provides default values that can be used in {@link Parameter#format(String)}.
 	 */
-	public static final Predicate<String> UPPER = StringUtils::isUpper;
+	public static class Format
+	{
+		private Format() { /* no instances */ }
+		public static final String TEXT = "text";
+		public static final String LONGTEXT = "longtext";
+		public static final String NUMBER = "number";
+		public static final String PASSWORD = "password";
+		public static final String BOOLEAN = "boolean";
+		public static final String DATE = "date";
+		public static final String TIME = "time";
+		public static final String DATETIME = "datetime";
+		public static final String JSON = "json";
+		public static final String CODE = "code";
+		public static final String SELECT = "select";
+		public static final String OPAQUE = "opaque";
+	}
 	
 	/**
-	 * Rule for lower case a-z
+	 * This class provides default values that can be used in {@link Parameter#rule(Predicate)}. 
 	 */
-	public static final Predicate<String> LOWER = StringUtils::isLower;
-	
-	/**
-	 * Rule for digits 0-9
-	 */
-	public static final Predicate<String> DIGIT = StringUtils::isDigit;
-	
-	/**
-	 * Rule for letters a-z A-Z
-	 */
-	public static final Predicate<String> ALPHA = StringUtils::isAlpha;
-	
-	/**
-	 * Rule for letters and digits a-z A-Z 0-9
-	 */
-	public static final Predicate<String> ALPHANUM = StringUtils::isAlphaNum;
-	
-	/**
-	 * Rule for letters, digits and space a-z A-Z 0-9
-	 */
-	public static final Predicate<String> ALPHANUMSPACE = (String value) -> StringUtils.isAlphaNum(value, true);
-	
-	/**
-	 * Rule for boolean
-	 */
-	public static final Predicate<String> BOOLEAN = StringUtils::isBoolean;
-	
-	/**
-	 * Rule for base64
-	 */
-	public static final Predicate<String> BASE64 = StringUtils::isBase64;
-	
-	/**
-	 * Rule for hexa
-	 */
-	public static final Predicate<String> HEXA = StringUtils::isHexa;
-	
-	/**
-	 * Rule for integer
-	 */
-	public static final Predicate<String> INTEGER = StringUtils::isInteger;
-	
-	/**
-	 * Rule for floating point number
-	 */
-	public static final Predicate<String> FLOAT = StringUtils::isFloatingPoint;
-	
-	/**
-	 * Rule for routing path
-	 */
-	public static final Predicate<String> PATH = StringUtils::isPath;
-	
-	/**
-	 * Rule for routing path with wildcards
-	 */
-	public static final Predicate<String> WILDCARD_PATH = StringUtils::isWildcardPath;
-	
-	/**
-	 * Rule for entity id
-	 */
-	public static final Predicate<String> ID = (String value) -> value != null && value.length() == 25 && value.charAt(8) == '-' && StringUtils.isHexa(value.substring(0, 8)) && StringUtils.isHexa(value.substring(9));
-	
-	/**
-	 * Rule for email address
-	 */
-	public static final Predicate<String> EMAIL = StringUtils::isEmailSimple;
-	
-	/**
-	 * Rule for file name
-	 */
-	public static final Predicate<String> FILENAME = (String value) -> StringUtils.isComposedOf(value, "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789_.");
-	
-	/**
-	 * Rule for URL
-	 */
-	public static final Predicate<String> URL = StringUtils::isUrlSimple;
-	
-	/**
-	 * Rule for JSON Object
-	 * Note that this is a simple trivial check, it does not mean that the value is a valid JSON Object.
-	 */
-	public static final Predicate<String> JSON_MAP = (String value) -> value != null && value.startsWith("{") && value.endsWith("}");
-	
-	/**
-	 * Rule for JSON Array
-	 * Note that this is a simple trivial check, it does not mean that the value is a valid JSON Array.
-	 */
-	public static final Predicate<String> JSON_LIST = (String value) -> value != null && value.startsWith("[") && value.endsWith("]");
+	public static class Rule
+	{
+		private Rule() { /* no instances */ }
+		
+		/**
+		 * Rule for upper case A-Z
+		 */
+		public static final Predicate<String> UPPER = StringUtils::isUpper;
+		
+		/**
+		 * Rule for lower case a-z
+		 */
+		public static final Predicate<String> LOWER = StringUtils::isLower;
+		
+		/**
+		 * Rule for digits 0-9
+		 */
+		public static final Predicate<String> DIGIT = StringUtils::isDigit;
+		
+		/**
+		 * Rule for letters a-z A-Z
+		 */
+		public static final Predicate<String> ALPHA = StringUtils::isAlpha;
+		
+		/**
+		 * Rule for letters and digits a-z A-Z 0-9
+		 */
+		public static final Predicate<String> ALPHANUM = StringUtils::isAlphaNum;
+		
+		/**
+		 * Rule for letters, digits and space a-z A-Z 0-9
+		 */
+		public static final Predicate<String> ALPHANUMSPACE = (String value) -> StringUtils.isAlphaNum(value, true);
+		
+		/**
+		 * Rule for boolean
+		 */
+		public static final Predicate<String> BOOLEAN = StringUtils::isBoolean;
+		
+		/**
+		 * Rule for base64
+		 */
+		public static final Predicate<String> BASE64 = StringUtils::isBase64;
+		
+		/**
+		 * Rule for hexa
+		 */
+		public static final Predicate<String> HEXA = StringUtils::isHexa;
+		
+		/**
+		 * Rule for integer
+		 */
+		public static final Predicate<String> INTEGER = StringUtils::isInteger;
+		
+		/**
+		 * Rule for floating point number
+		 */
+		public static final Predicate<String> FLOAT = StringUtils::isFloatingPoint;
+		
+		/**
+		 * Rule for routing path
+		 */
+		public static final Predicate<String> PATH = StringUtils::isPath;
+		
+		/**
+		 * Rule for routing path with wildcards
+		 */
+		public static final Predicate<String> WILDCARD_PATH = StringUtils::isWildcardPath;
+		
+		/**
+		 * Rule for entity id
+		 */
+		public static final Predicate<String> ID = (String value) -> value != null && value.length() == 25 && value.charAt(8) == '-' && StringUtils.isHexa(value.substring(0, 8)) && StringUtils.isHexa(value.substring(9));
+		
+		/**
+		 * Rule for email address
+		 */
+		public static final Predicate<String> EMAIL = StringUtils::isEmailSimple;
+		
+		/**
+		 * Rule for file name
+		 */
+		public static final Predicate<String> FILENAME = (String value) -> StringUtils.isComposedOf(value, "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789_.");
+		
+		/**
+		 * Rule for URL
+		 */
+		public static final Predicate<String> URL = StringUtils::isUrlSimple;
+		
+		/**
+		 * Rule for JSON Object
+		 * Note that this is a simple trivial check, it does not mean that the value is a valid JSON Object.
+		 */
+		public static final Predicate<String> JSON_MAP = (String value) -> value != null && value.startsWith("{") && value.endsWith("}");
+		
+		/**
+		 * Rule for JSON Array
+		 * Note that this is a simple trivial check, it does not mean that the value is a valid JSON Array.
+		 */
+		public static final Predicate<String> JSON_LIST = (String value) -> value != null && value.startsWith("[") && value.endsWith("]");
+	}
 }

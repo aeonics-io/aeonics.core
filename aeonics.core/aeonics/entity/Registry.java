@@ -9,6 +9,7 @@ import java.util.function.Predicate;
 
 import aeonics.data.Data;
 import aeonics.template.Item;
+import aeonics.util.Callback;
 import aeonics.util.Exportable;
 import aeonics.util.StringUtils;
 
@@ -82,6 +83,30 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	// ===============================
 	
 	/**
+	 * The onAdd event callback
+	 */
+	private Callback<Entity> onAdd = new Callback<>();
+	
+	/**
+	 * Event callback called every time an entity is added to this registry.
+	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * @return the onAdd event handler
+	 */
+	public Callback<Entity> onAdd() { return onAdd; }
+	
+	/**
+	 * The onRemove event callback
+	 */
+	private Callback<Entity> onRemove = new Callback<>();
+	
+	/**
+	 * Event callback called every time an entity is removed from this registry.
+	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * @return the onRemove event handler
+	 */
+	public Callback<Entity> onRemove() { return onRemove; }
+	
+	/**
 	 * private constructor
 	 * @param category the registry category
 	 */
@@ -101,6 +126,24 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	 * Holds all the entities in this registry category.
 	 */
 	private Map<String, T> entities = new ConcurrentHashMap<>();
+	
+	/**
+	 * Checks whether the specified entity exists in this registry.
+	 * The id is checked first and is a very cheap lookup. If nothing matches, all entities are checked to find the first `name` property that matches.
+	 * @param id the entity id
+	 * @return true if the entity is found, false otherwise
+	 */
+	public boolean contains(String id)
+	{
+		if( id == null || id.isBlank() ) return false;
+		if( entities.containsKey(id) ) return true;
+		
+		// search by name : much slower
+		for( T e : entities.values() )
+			if( e != null && id.equals(e.name()) )
+				return true;
+		return false;
+	}
 	
 	/**
 	 * Fetches the entity based on its id or `name` property.
@@ -149,6 +192,7 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 		if( entity == null ) throw new IllegalArgumentException("Cannot register a null entity");
 		if( !entity.category().equals(category()) ) throw new IllegalArgumentException("Entity category mismatch");
 		entities.put(entity.id(), entity);
+		onAdd().trigger(entity);
 		return entity;
 	}
 	
@@ -164,7 +208,11 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	{
 		if( id == null || id.isBlank() ) return null;
 		T entity = entities.remove(id);
-		if( entity != null ) return closeIfCloseable((U) entity);
+		if( entity != null )
+		{
+			onRemove().trigger(entity);
+			return closeIfCloseable((U) entity);
+		}
 		
 		// search by name : much slower
 		for( T e : entities.values() )
@@ -172,6 +220,7 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 			if( e != null && id.equals(e.name()) )
 			{
 				entities.remove(e.id());
+				onRemove().trigger(e);
 				return closeIfCloseable((U) e);
 			}
 		}
@@ -193,6 +242,7 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 			if( entity != null && comparator.test(entity) )
 			{
 				entities.remove(entity.id());
+				onRemove().trigger(entity);
 				return closeIfCloseable((U) entity);
 			}
 		}
@@ -220,8 +270,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 			if( entity == null ) continue;
 			if( comparator.test(entity) )
 			{
-				closeIfCloseable(entity);
 				values.remove();
+				onRemove().trigger(entity);
+				closeIfCloseable(entity);
 			}
 		}
 	}

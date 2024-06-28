@@ -2,7 +2,6 @@ package aeonics.template;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -387,7 +386,8 @@ public class Template<T extends Entity> implements Documented
 		
 		for( Relationship r : relationships.values() )
 		{
-			List<Data> list = new LinkedList<Data>();
+			instance.defineRelation(r);
+			
 			Data rels = data.containsKey(r.name()) ? data.get(r.name()) : Data.list();
 			if( !rels.isList() ) rels = Data.list().add(rels);
 			
@@ -402,9 +402,8 @@ public class Template<T extends Entity> implements Documented
 					if( enforceParameterValidation() && !p.validate(value) )
 						throw new RuntimeException("Invalid value for parameter " + p.name() + " of relationship " + r.name());
 				}
-				list.add(link);
+				instance.addUncheckedRelation(r.name(), link.asString("id"), link);
 			}
-			instance.relationships().put(r.name(), Tuple.of(list, r));
 		}
 		
 		if( Manager.of(Config.class) != null )
@@ -419,10 +418,13 @@ public class Template<T extends Entity> implements Documented
 			try { builder.accept(data, instance); }
 			catch(Exception e)
 			{
+				e.printStackTrace();
 				Manager.of(Logger.class).warning(Template.class, e);
 				throw e;
 			}
 		}
+		
+		instance.onCreate().trigger(null);
 		return instance;
 	}
 	
@@ -464,11 +466,12 @@ public class Template<T extends Entity> implements Documented
 			if( t == null ) instance.parameters().put(p.name(), Tuple.of(value, p));
 			else t.a = value;
 		}
+		
 		for( Relationship r : relationships.values() )
 		{
 			if( !data.containsKey(r.name()) ) continue;
 			
-			List<Data> list = new LinkedList<Data>();
+			instance.clearRelation(r.name());
 			Data rels = data.get(r.name());
 			if( !rels.isList() ) rels = Data.list().add(rels);
 			
@@ -483,15 +486,12 @@ public class Template<T extends Entity> implements Documented
 					if( enforceParameterValidation() && !p.validate(value) )
 						throw new RuntimeException("Invalid value for parameter " + p.name() + " of relationship " + r.name());
 				}
-				list.add(link);
+				instance.addUncheckedRelation(r.name(), link.asString("id"), link);
 			}
-			
-			Tuple<List<Data>, Relationship> t = instance.relationships().get(r.name());
-			if( t == null )
-				instance.relationships().put(r.name(), Tuple.of(list, r));
-			else t.a = list;
 		}
 		if( modifier != null ) modifier.accept(data, instance);
+		
+		instance.onUpdate().trigger(null);
 		return instance;
 	}
 
@@ -504,10 +504,20 @@ public class Template<T extends Entity> implements Documented
 		Data r = Data.map();
 		for( Relationship x : relationships.values() ) r.put(x.name(), x.export());
 		
+		Data c = Data.map();
+		for( String x : configs )
+		{
+			Tuple<String, String> name = Config.explodeName(x);
+			Parameter definition = Manager.of(Config.class).definition(name.a, name.b); 
+			c.put(x, definition == null ? null : definition.export());
+		}
+		
 		return Documented.super.export()
+			.put("__type_plugin", type().getModule().getName())
+			.put("__target_plugin", target().getModule().getName())
 			.put("parameters", p)
 			.put("relations", r)
-			.put("configs", r)
+			.put("configs", c)
 			.put("category", category())
 			.put("type", StringUtils.toLowerCase(type()))
 			.put("target", StringUtils.toLowerCase(target()))

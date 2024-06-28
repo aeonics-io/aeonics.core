@@ -1,10 +1,16 @@
 package aeonics.manager;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+
 import aeonics.Plugin;
 import aeonics.entity.Registry;
 import aeonics.template.Factory;
+import aeonics.template.Template;
 import aeonics.util.Callback;
 import aeonics.util.Internal;
+import aeonics.util.Callback.Once;
 
 /**
  * The lifecycle manager should be considered as a global event bus for different application phases.
@@ -78,23 +84,103 @@ public abstract class Lifecycle extends Manager.Type
 	public abstract void boot();
 	
 	/**
+	 * The before callbacks
+	 */
+	private static Map<Phase, Callback<Void>> before = new ConcurrentHashMap<>();
+	
+	/**
 	 * Registers a handler to run before other handlers in the specified phase.
+	 * All handlers are global and shared for all instances of the Lifecycle manager.
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public abstract void before(Phase phase, Callback.Once<Void> handler);
+	public void before(Phase phase, Once<Void> handler) 
+	{
+		synchronized(phase) { before.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
+	}
+	
+	/**
+	 * Returns the global callback for the given phase
+	 * @param phase the phase
+	 * @return the matching callback
+	 */
+	protected Callback<Void> before(Phase phase) { return before.getOrDefault(phase, new Callback<Void>()); }
+
+	/**
+	 * The on callbacks
+	 */
+	private static Map<Phase, Callback<Void>> on = new ConcurrentHashMap<>();
 	
 	/**
 	 * Registers a handler to run in the specified phase.
+	 * All handlers are global and shared for all instances of the Lifecycle manager.
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public abstract void on(Phase phase, Callback.Once<Void> handler);
+	public void on(Phase phase, Once<Void> handler) 
+	{
+		synchronized(phase) { on.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
+	}
+	
+	/**
+	 * Returns the global callback for the given phase
+	 * @param phase the phase
+	 * @return the matching callback
+	 */
+	protected Callback<Void> on(Phase phase) { return on.getOrDefault(phase, new Callback<Void>()); }
+
+	/**
+	 * The after callbacks
+	 */
+	private static Map<Phase, Callback<Void>> after = new ConcurrentHashMap<>();
 	
 	/**
 	 * Registers a handler to run after other handlers in the specified phase.
+	 * All handlers are global and shared for all instances of the Lifecycle manager.
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public abstract void after(Phase phase, Callback.Once<Void> handler);
+	public void after(Phase phase, Once<Void> handler)
+	{
+		synchronized(phase) { after.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
+	}
+	
+	/**
+	 * Returns the global callback for the given phase.
+	 * @param phase the phase
+	 * @return the matching callback
+	 */
+	protected Callback<Void> after(Phase phase) { return after.getOrDefault(phase, new Callback<Void>()); }
+	
+	/**
+	 * Default initial lifecycle template and entity implementation
+	 */
+	private static final class NoopLifecycle extends Manager<Lifecycle>
+	{
+		private static class Implementation extends Lifecycle
+		{
+			@Override
+			public void boot() { throw new IllegalStateException("Cannot boot on this manager"); }
+		}
+
+		@Override
+		public Template<? extends Lifecycle> template()
+		{
+			return new Template<Lifecycle>(target(), type(), category())
+				.creator(creator())
+				.summary("Noop Lifecycle")
+				.description("Does nothing.");
+		}
+		
+		protected Class<? extends NoopLifecycle.Implementation> defaultTarget() { return NoopLifecycle.Implementation.class; }
+		protected Supplier<? extends NoopLifecycle.Implementation> defaultCreator() { return NoopLifecycle.Implementation::new; }
+	}
+	
+	/**
+	 * Default logger to the console.
+	 * This is used when the actual logger is not (yet/longer) available
+	 * @hidden
+	 */
+	@Internal
+	public static final Lifecycle NOOP = Manager.set(Lifecycle.class, Factory.add(new NoopLifecycle()).build().name("Noop Lifecycle"));
 }

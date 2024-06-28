@@ -388,7 +388,10 @@ public abstract class Storage extends Item<Storage.Type>
 				.description("This storage is a direct access to the hard drive and stores the content in files as provided by the underlying operating system.")
 				.add(new Parameter("root")
 					.summary("Root directory")
-					.description("The root directory of this storage. All content will be stored as file or directory under this root path."));
+					.description("The root directory of this storage. All content will be stored as file or directory under this root path.")
+					.format(Parameter.Format.TEXT)
+					.optional(true)
+					.defaultValue(Data.of("")));
 		}
 	}
 	

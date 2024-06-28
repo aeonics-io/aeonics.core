@@ -285,6 +285,8 @@ public class Queue extends Item<Queue.Type>
 				.description("This parameter defines the maximum number of messages that can be queued. If the limit is reached, "
 					+ "the queue will block the publisher until some spots are freed. To disable the limit, set it to a negative value. "
 					+ "If the limit is set to 0, then it means there will not be any queuing and the messages will be processed directly as they arrive.")
+				.rule(Parameter.Rule.INTEGER)
+				.format(Parameter.Format.NUMBER)
 				.defaultValue(Data.of(-1)))
 			.add(new Parameter("concurrency")
 				.summary("Concurrency level")
@@ -292,10 +294,14 @@ public class Queue extends Item<Queue.Type>
 					+ "In order to ensure messages are processed sequentially, set this parameter to 1. The value 0 or a negative value means "
 					+ "that there is no limit to the number of concurrent processing. In a way, this means that there is no queuing because "
 					+ "all messages are sent for processing immediately. The default value is the number of processors on the machine.")
+				.rule(Parameter.Rule.DIGIT)
+				.format(Parameter.Format.NUMBER)
 				.defaultValue(Data.of(Runtime.getRuntime().availableProcessors())))
 			.add(new Parameter("priority")
 				.summary("High priority")
 				.description("Whether or not this queue should execute in high priority mode.")
+				.rule(Parameter.Rule.BOOLEAN)
+				.format(Parameter.Format.BOOLEAN)
 				.defaultValue(Data.of(false)))
 			.add(new Relationship("actions")
 				.category(Action.class)
@@ -303,14 +309,16 @@ public class Queue extends Item<Queue.Type>
 				.description("List of action entities that are directly connected to this queue.")
 				.add(new Parameter("input")
 					.summary("Input Channel")
-					.description("The name of the input channel to which this action is bound.")))
+					.description("The name of the input channel to which this action is bound.")
+					.format(Parameter.Format.TEXT)))
 			.add(new Relationship("destinations")
 				.category(Destination.class)
 				.summary("Linked Destinations")
 				.description("List of destination entities that are directly connected to this queue.")
 				.add(new Parameter("input")
 					.summary("Input Channel")
-					.description("The name of the input channel to which this action is bound.")))
+					.description("The name of the input channel to which this action is bound.")
+					.format(Parameter.Format.TEXT)))
 			.builder((data, instance) ->
 			{
 				if( instance instanceof Queue.Type)

@@ -55,7 +55,7 @@ public abstract class Logger extends Manager.Type
 	/**
 	 * The current log level
 	 */
-	private int level = INFO;
+	private int level = CONFIG;
 	/**
 	 * Returns the current log level
 	 * @return the current log level
@@ -730,7 +730,8 @@ public abstract class Logger extends Manager.Type
 		@Override
 		public Template<? extends Logger> template()
 		{
-			return super.template()
+			return new Template<Logger>(target(), type(), category())
+				.creator(creator())
 				.summary("Console logger")
 				.description("Sends all logs in JSON format to the standard output console regardless of the log level.");
 		}
@@ -745,5 +746,5 @@ public abstract class Logger extends Manager.Type
 	 * @hidden
 	 */
 	@Internal
-	public static final Logger CONSOLE = Factory.add(new ConsoleLogger()).build().name("Console Logger");
+	public static final Logger CONSOLE = Manager.set(Logger.class, Factory.add(new ConsoleLogger()).build().name("Console Logger"));
 }

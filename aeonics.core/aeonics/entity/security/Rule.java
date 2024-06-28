@@ -230,25 +230,26 @@ public abstract class Rule extends Item<Rule.Type>
 				if( attributes.isMap() && attributes.equals(attribute, value) ) return true;
 				
 				// user role attributes
-				for( Data r : user.relationships().get("roles").a )
+				for( Tuple<Entity, Data> roles : user.relations("roles") )
 				{
-					Role.Type role = Registry.of(Role.class).get(r.asString("id"));
-					attributes = role.valueOf("attributes");
+					if( roles.a == null ) continue;
+					attributes = roles.a.valueOf("attributes");
 					if( attributes.isMap() && attributes.equals(attribute, value) ) return true;
 				}
 				
 				// group attributes
-				for( Data g : user.relationships().get("groups").a )
+				for( Tuple<Entity, Data> groups : user.relations("groups") )
 				{
-					Group.Type group = Registry.of(Group.class).get(g.asString("id"));
+					if( groups.a == null ) continue;
+					Group.Type group = groups.a.cast();
 					attributes = group.valueOf("attributes");
 					if( attributes.isMap() && attributes.equals(attribute, value) ) return true;
 					
 					// group role attributes
-					for( Data r : group.relationships().get("roles").a )
+					for( Tuple<Entity, Data> roles : group.relations("roles") )
 					{
-						Role.Type role = Registry.of(Role.class).get(r.asString("id"));
-						attributes = role.valueOf("attributes");
+						if( roles.a == null ) continue;
+						attributes = roles.a.valueOf("attributes");
 						if( attributes.isMap() && attributes.equals(attribute, value) ) return true;
 					}
 				}
@@ -269,10 +270,12 @@ public abstract class Rule extends Item<Rule.Type>
 				.description("A security rule that checks if a user attribute is equal to the specified value. The attribute may be inherited by one of the user groups or roles.")
 				.add(new Parameter("attribute")
 					.summary("Attribute name")
-					.description("The name of the user attribute to match."))
+					.description("The name of the user attribute to match.")
+					.format(Parameter.Format.TEXT))
 				.add(new Parameter("value")
 					.summary("Expected value")
-					.description("The expected value of the user attribute to match"))
+					.description("The expected value of the user attribute to match")
+					.format(Parameter.Format.TEXT))
 				;
 		}
 	}
@@ -307,14 +310,17 @@ public abstract class Rule extends Item<Rule.Type>
 				.description("A security rule that checks the current context data to verify if a property is equal to the specified value.")
 				.add(new Parameter("property")
 					.summary("Property name")
-					.description("The name of the context property to match."))
+					.description("The name of the context property to match.")
+					.format(Parameter.Format.TEXT))
 				.add(new Parameter("value")
 					.summary("Expected value")
-					.description("The expected value of the context property to match"))
+					.description("The expected value of the context property to match")
+					.format(Parameter.Format.TEXT))
 				.add(new Parameter("wildcard")
 					.summary("Wildcard pattern")
 					.description("Whether or not the value should be applied using the wildcard path logic.")
-					.rule(Parameter.BOOLEAN))
+					.rule(Parameter.Rule.BOOLEAN)
+					.format(Parameter.Format.BOOLEAN))
 				;
 		}
 	}
@@ -391,6 +397,7 @@ public abstract class Rule extends Item<Rule.Type>
 				.add(new Parameter("group")
 					.summary("Group name or id")
 					.description("The group name or id to match. This property can include a wildcard pattern in case of the group name.")
+					.format(Parameter.Format.TEXT)
 					);
 		}
 	}
@@ -444,6 +451,7 @@ public abstract class Rule extends Item<Rule.Type>
 				.add(new Parameter("role")
 					.summary("Role name or id")
 					.description("The role name or id to match. This property can include a wildcard pattern in case of the role name.")
+					.format(Parameter.Format.TEXT)
 					);
 		}
 	}

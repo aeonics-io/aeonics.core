@@ -1,7 +1,5 @@
 package aeonics.entity;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
@@ -41,22 +39,16 @@ public class Topic extends Item<Topic.Type>
 			
 			Manager.of(Monitor.class).count(this);
 
-			// implement the relationship iteration manually
-			// to avoid creating iterator instances
-			
-			Tuple<List<Data>, Relationship> r = this.relationships().get("queues");
-			if( r == null || r.a.isEmpty() ) return;
-			
 			String key = message.key();
-			if( r.a.size() == 1 )
+			boolean shouldClone = false;
+			for( Tuple<Entity, Data> relation : this.relations("queues") )
 			{
-				Data data = r.a.get(0);
-				if( StringUtils.simplePathMatches(data.asString("binding"), key) )
+				if( StringUtils.simplePathMatches(relation.b.asString("binding"), key) )
 				{
-					Queue.Type q = Registry.of(Queue.class).get(data.asString("id"));
+					Queue.Type q = relation.a.cast();
 					if( q != null )
 					{
-						try { q.accept(message); }
+						try { q.accept(shouldClone ? message.clone() : message); shouldClone = true; }
 						catch(Exception e)
 						{
 							Manager.of(Logger.class).severe(Queue.class, e);
@@ -69,35 +61,6 @@ public class Topic extends Item<Topic.Type>
 				{
 					Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
 					// TODO : discard ?
-				}
-			}
-			else
-			{
-				List<Queue.Type> matches = new ArrayList<Queue.Type>(); 
-				for( Data data : r.a )
-				{
-					if( StringUtils.simplePathMatches(data.asString("binding"), key) )
-					{
-						Queue.Type q = Registry.of(Queue.class).get(data.asString("id"));
-						if( q != null ) matches.add(q);
-					}
-				}
-				
-				if( matches.isEmpty() )
-				{
-					Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-					// TODO : discard ?
-				}
-				
-				for( int i = matches.size()-1; i >= 0 ; i-- )
-				{
-					try { matches.get(i).accept(i > 0 ? message.clone() : message); }
-					catch(Exception e)
-					{
-						Manager.of(Logger.class).severe(Queue.class, e);
-						Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-						// TODO : discard ?
-					}
 				}
 			}
 		}
@@ -125,6 +88,9 @@ public class Topic extends Item<Topic.Type>
 				.description("The list of subscriptions.")
 				.add(new Parameter("binding")
 					.summary("Subscription binding key")
-					.description("The subscription key allows to filter the messages that the queue will receive.")));
+					.description("The subscription key allows to filter the messages that the queue will receive.")
+					.format(Parameter.Format.TEXT)
+					.optional(true)
+					.defaultValue(Data.of("#"))));
 	}
 }
