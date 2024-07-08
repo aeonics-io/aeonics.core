@@ -152,14 +152,14 @@ public abstract class Storage extends Item<Storage.Type>
 		 * @param path the full path
 		 * @return the content or null if not found
 		 */
-		public String getString(String path) { return new String(get(path), StandardCharsets.UTF_8); }
+		public String getString(String path) { byte[] b = get(path); return b == null ? null : new String(b, StandardCharsets.UTF_8); }
 		
 		/**
 		 * Retrieve the content of the specified final entry parsed from JSON
 		 * @param path the full path
 		 * @return the content or null if not found
 		 */
-		public Data getData(String path) { return Json.decode(getString(path)); }
+		public Data getData(String path) { String s = getString(path); return s == null ? null : Json.decode(getString(path)); }
 		
 		/**
 		 * Returns whether or not the specified path is a final entry
@@ -271,6 +271,7 @@ public abstract class Storage extends Item<Storage.Type>
 				Path p = path(path);
 				try
 				{
+					if( !Files.isRegularFile(p) ) return null;
 					return Files.readAllBytes(p);
 				}
 				catch(Exception e) { throw new RuntimeException(e); }

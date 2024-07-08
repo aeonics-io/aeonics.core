@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import aeonics.entity.Origin;
 import aeonics.template.Factory;
 import aeonics.template.Template;
+import aeonics.util.Exportable;
 import aeonics.util.Internal;
 
 /**
@@ -103,7 +104,7 @@ public abstract class Executor extends Manager.Type
 	
 	/**
 	 * This class represents a task that is running, is done or will run in the future.
-	 * It is a simplified wrapper around {@link CompletableFuture} designed to be used by the Execute implementations.
+	 * It is a simplified wrapper around {@link CompletableFuture} designed to be used by the Executor implementations.
 	 * @param <T> the return type of the task
 	 */
 	public static class Task<T>
@@ -348,7 +349,7 @@ public abstract class Executor extends Manager.Type
 	}
 
 	/**
-	 * Default initial execurot template and entity implementation
+	 * Default initial executor template and entity implementation
 	 */
 	private static final class SynchronousExecutor extends Manager<Executor>
 	{

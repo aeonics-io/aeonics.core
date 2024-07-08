@@ -337,8 +337,8 @@ public class Hardware
 			}
 			
 			/**
-			 * Returns the amount of virtual memory that is guaranteed tobe available to the running process in bytes.
-			 * @return the amount of virtual memory that is guaranteed tobe available to the running process in bytes
+			 * Returns the amount of virtual memory that is guaranteed to be available to the running process in bytes.
+			 * @return the amount of virtual memory that is guaranteed to be available to the running process in bytes
 			 */
 			public static long process()
 			{

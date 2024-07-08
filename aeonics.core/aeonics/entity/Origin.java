@@ -127,7 +127,7 @@ public abstract class Origin extends Item<Origin.Type>
 			for( Channel x : outputs ) o.put(x.name(), x.export());
 			
 			return super.export()
-				.put("output", o);
+				.put("outputs", o);
 		}
 	}
 	

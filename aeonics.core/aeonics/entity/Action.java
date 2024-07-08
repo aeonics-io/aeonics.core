@@ -156,7 +156,7 @@ public abstract class Action extends Item<Action.Type>
 			
 			return super.export()
 				.put("inputs", i)
-				.put("output", o);
+				.put("outputs", o);
 		}
 	}
 	

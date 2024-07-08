@@ -38,28 +38,76 @@ public abstract class Scheduler extends Manager.Type
 	 */
 	public abstract static class Cron extends Item<Cron.Type>
 	{
-		public abstract static class Type extends Entity implements Consumer<ZonedDateTime>
+		@SuppressWarnings("unchecked")
+		public static class Type extends Entity implements Consumer<ZonedDateTime>
 		{
-			protected Type()
-			{
-				String type = type();
-				initialize(category(), type == null || type.isBlank() ? StringUtils.toLowerCase(getClass()) : type, null, true);
-				reset();
-			}
+			/**
+			 * Cron tasks are internal by default
+			 */
+			public boolean internal() { return true; }
+			
+			/**
+			 * This method will be called by the scheduler when the tasks should run.
+			 */
+			@Internal
+			public void accept(ZonedDateTime time) { if( task != null ) task.accept(time); }
+			
+			/**
+			 * The task to execute
+			 */
+			private Consumer<ZonedDateTime> task = null;
+			
+			/**
+			 * Returns the task to execute
+			 * @return the task to execute
+			 */
+			public Consumer<ZonedDateTime> task() { return task; }
+			
+			/**
+			 * Sets the task to execute
+			 * @param <R> this
+			 * @param task the task to execute
+			 * @return this for chaining
+			 */
+			public <R extends Type> R task(Consumer<ZonedDateTime> task) { this.task = task; return (R)this; }
+			
+			/**
+			 * Start time for this scheduled task
+			 */
+			private ZonedDateTime start = null;
 			
 			/**
 			 * Returns the origin point in time where the {@link #rule()} applies. This is the equivalent of the "DTSTART" component of RFC-5545.
-			 * @return the origin point in time
+			 * @return the origin point in time (may be null if not set)
 			 */
-			public abstract ZonedDateTime start();
+			public ZonedDateTime start() { return start; }
+			
+			/**
+			 * Sets the origin point in time where the {@link #rule()} applies. This is the equivalent of the "DTSTART" component of RFC-5545.
+			 * @param <R> this
+			 * @param start the origin point in time
+			 * @return this for chaining
+			 */
+			public <R extends Type> R start(ZonedDateTime start) { this.start = start; reset(); return (R)this; }
+			
+			/**
+			 * The scheduling rule
+			 */
+			private String rrule = null;
 			
 			/**
 			 * Returns the scheduling rule as defined by the "RRULE" component of RFC-5545.
-			 * <p><b>If this property changes, you should call {@link #reset()} to update the occurences.</b></p>
-			 * @see #reset()
-			 * @return the scheduling rule
+			 * @return the scheduling rule (may be null if not set)
 			 */
-			public abstract String rule();
+			public String rule() { return rrule; }
+			
+			/**
+			 * Sets the scheduling rule as defined by the "RRULE" component of RFC-5545.
+			 * @param <R> this
+			 * @param rrule the scheduling rule
+			 * @return this for chaining
+			 */
+			public <R extends Type> R rule(String rrule) { this.rrule = rrule; reset(); return (R)this; }
 			
 			/**
 			 * Hardcoded value of the entity category to the {@link Cron} class
@@ -74,15 +122,18 @@ public abstract class Scheduler extends Manager.Type
 			 */
 			public void reset()
 			{
+				String rr = rule();
+				Consumer<ZonedDateTime> t = task();
+				ZonedDateTime from = start();
+				if( rr == null || t == null || from == null ) return;
+				
 				synchronized(this)
 				{
-					String rr = rule();
-					if( rr == null || rr.isBlank() ) return;
+					if( rr.isBlank() ) return;
 					
 					RRULE rrule = new RRULE(rule(), start());
 					ZonedDateTime now = ZonedDateTime.now().plusSeconds(rrule.freq == RRULE.Freq.SECONDLY ? 0 : 5);
-					ZonedDateTime start = start();
-					iterator = rrule.iterator(start.isAfter(now) ? start : now);
+					iterator = rrule.iterator(from.isAfter(now) ? from : now);
 					next = iterator.next();
 				}
 			}
@@ -116,6 +167,10 @@ public abstract class Scheduler extends Manager.Type
 			 */
 			private ZonedDateTime next = null;
 		}
+	
+		protected Class<? extends Cron.Type> defaultTarget() { return Cron.Type.class; }
+		protected java.util.function.Supplier<? extends Cron.Type> defaultCreator() { return Cron.Type::new; }
+		protected Class<? extends Cron> category() { return Cron.class; }
 	}
 	
 	/**
@@ -141,82 +196,92 @@ public abstract class Scheduler extends Manager.Type
 	 * @param task the task to run, it will receive the current time when called
 	 * @param step the time interval
 	 * @param unit the time unit
+	 * @return the cron task
 	 */
-	public void every(Consumer<ZonedDateTime> task, long step, final ChronoUnit unit)
+	public Scheduler.Cron.Type every(Consumer<ZonedDateTime> task, long step, final ChronoUnit unit)
 	{
-		ZonedDateTime now = ZonedDateTime.now();
-		Registry.add(new Scheduler.Cron.Type()
+		return every(task, step, unit, ZonedDateTime.now());
+	}
+	
+	/**
+	 * Schedules a task to run at a specified time interval starting a the specified moment.
+	 * @param task the task to run, it will receive the current time when called
+	 * @param step the time interval
+	 * @param unit the time unit
+	 * @param from the starting point in time
+	 * @return the cron task
+	 */
+	public Scheduler.Cron.Type every(Consumer<ZonedDateTime> task, long step, final ChronoUnit unit, ZonedDateTime from)
+	{
+		final String rrule;
+		long interval = step;
+		String freq = "";
+		switch(unit)
 		{
-			public void accept(ZonedDateTime t)
-			{
-				task.accept(t);
-			}
-
-			public ZonedDateTime start()
-			{
-				return now;
-			}
-
-			public String rule()
-			{
-				long interval = step;
-				String freq = "";
-				switch(unit)
-				{
-					case NANOS: 
-						interval /= 1000;
-						// fallthrough
-					case MICROS: 
-						interval /= 1000;
-						// fallthrough
-					case MILLIS:
-						interval /= 1000;
-						// fallthrough
-					case SECONDS:
-						freq = RRULE.Freq.SECONDLY.toString();
-						break;
-					case MINUTES:
-						freq = RRULE.Freq.MINUTELY.toString();
-						break;
-					case HOURS:
-						freq = RRULE.Freq.HOURLY.toString();
-						break;
-					case HALF_DAYS:
-						interval /= 2;
-						// fallthrough
-					case DAYS:
-						freq = RRULE.Freq.DAILY.toString();
-						break;
-					case WEEKS:
-						freq = RRULE.Freq.WEEKLY.toString();
-						break;
-					case MONTHS:
-						freq = RRULE.Freq.MONTHLY.toString();
-						break;
-					case FOREVER:
-						interval *= 1000;
-						// fallthrough
-					case ERAS:
-						interval *= 1000;
-						// fallthrough
-					case MILLENNIA:
-						interval *= 10;
-						// fallthrough
-					case CENTURIES:
-						interval *= 10;
-						// fallthrough
-					case DECADES:
-						interval *= 10;
-						// fallthrough
-					case YEARS:
-						freq = RRULE.Freq.YEARLY.toString();
-						break;
-					default: throw new IllegalArgumentException("Invalid time unit in RRULE");
-				}
-				return "RRULE:FREQ=" + freq + ";INTERVAL=" + interval;
-			}
-		});
+			case NANOS: 
+				interval /= 1000;
+				// fallthrough
+			case MICROS: 
+				interval /= 1000;
+				// fallthrough
+			case MILLIS:
+				interval /= 1000;
+				// fallthrough
+			case SECONDS:
+				freq = RRULE.Freq.SECONDLY.toString();
+				break;
+			case MINUTES:
+				freq = RRULE.Freq.MINUTELY.toString();
+				break;
+			case HOURS:
+				freq = RRULE.Freq.HOURLY.toString();
+				break;
+			case HALF_DAYS:
+				interval /= 2;
+				// fallthrough
+			case DAYS:
+				freq = RRULE.Freq.DAILY.toString();
+				break;
+			case WEEKS:
+				freq = RRULE.Freq.WEEKLY.toString();
+				break;
+			case MONTHS:
+				freq = RRULE.Freq.MONTHLY.toString();
+				break;
+			case FOREVER:
+				interval *= 1000;
+				// fallthrough
+			case ERAS:
+				interval *= 1000;
+				// fallthrough
+			case MILLENNIA:
+				interval *= 10;
+				// fallthrough
+			case CENTURIES:
+				interval *= 10;
+				// fallthrough
+			case DECADES:
+				interval *= 10;
+				// fallthrough
+			case YEARS:
+				freq = RRULE.Freq.YEARLY.toString();
+				break;
+			default: throw new IllegalArgumentException("Invalid time unit in RRULE");
+		}
+		rrule = "RRULE:FREQ=" + freq + ";INTERVAL=" + interval;
+		
+		Scheduler.Cron.Type c = Registry.add(new Scheduler.Cron() {}
+			.template()
+			.summary("Runs a task at regular interval")
+			.description("This task runs every " + step + " " + unit.toString() + " starting from " + (from == null ? ZonedDateTime.now() : from))
+			.build()
+			.task(task)
+			.start(from == null ? ZonedDateTime.now() : from)
+			.rule(rrule)
+		);
+		
 		refresh();
+		return c;
 	}
 	
 	/**
