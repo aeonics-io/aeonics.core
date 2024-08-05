@@ -42,7 +42,7 @@ public class Template<T extends Entity> implements Documented
 	private Supplier<? extends T> creator() { return creator; }
 	
 	/**
-	 * Sets the custom instance creator that privides new instance of the target entity.
+	 * Sets the custom instance creator that provides new instance of the target entity.
 	 * The returned objects must be instances of the {@link #target()} entity type.
 	 * <p>This method should not attempt to initialize the instance, if specific initialization is required, you
 	 * should provide a {@link #builder(BiConsumer)} and a {@link #modifier(BiConsumer)}.</p>
