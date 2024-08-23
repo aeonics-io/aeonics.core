@@ -198,7 +198,7 @@ public abstract class Storage extends Item<Storage.Type>
 		/**
 		 * Lists all direct sub-entries of the provided path.
 		 * If the priovided path is a final entry (a file), an empty list is returned.
-		 * Entries that are not final entries (directories) will be suffixed with a <code>File.separator</code>
+		 * Entries that are not final entries (directories) will be suffixed with a <code>/</code> character.
 		 * 
 		 * <p>The returned entries are relative to the provided path, so if the path "/foo/bar" is provided and a direct child
 		 * is "/foo/bar/beef", then "beef" is returned.</p>

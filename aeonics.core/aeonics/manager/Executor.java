@@ -382,7 +382,7 @@ public abstract class Executor extends Manager.Type
 	
 	/**
 	 * Default synchronous executor.
-	 * This is used when the actual executor is not (yet/longer) available
+	 * This is used when the actual executor is not yet available
 	 * @hidden
 	 */
 	@Internal

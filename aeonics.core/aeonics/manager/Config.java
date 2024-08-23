@@ -7,7 +7,7 @@ import aeonics.data.Data;
 import aeonics.entity.Entity;
 import aeonics.template.Parameter;
 import aeonics.util.StringUtils;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 import aeonics.util.Functions.BiConsumer;
 
 /**
@@ -120,7 +120,7 @@ public abstract class Config extends Manager.Type
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
 	 * @param type the entity type (should be or will be converted to lower case)
 	 * @param name the name of the configuration parameter
-	 * @return the configuration parameter value
+	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
 	 */
 	public abstract Data get(String type, String name);
 	
@@ -128,7 +128,7 @@ public abstract class Config extends Manager.Type
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
 	 * @param type the entity type
 	 * @param name the name of the configuration parameter
-	 * @return the configuration parameter value
+	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
 	 */
 	public Data get(Class<?> type, String name)
 	{
@@ -139,7 +139,7 @@ public abstract class Config extends Manager.Type
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
 	 * @param entity the entity instance. Its {@link Entity#type()} method will be used.
 	 * @param name the name of the configuration parameter
-	 * @return the configuration parameter value
+	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
 	 */
 	public Data get(Entity entity, String name)
 	{
@@ -151,7 +151,7 @@ public abstract class Config extends Manager.Type
 	 * The key will be split by '_' or '.' and converted to lower case: <code>Entity.Type.NAME</code> will be converted to the configuration 
 	 * parameter <code>entity type &gt; name</code>
 	 * @param key the parameter name with at least two components separated by a '.' or a '_'
-	 * @return the configuration parameter value or null if the key is invalid
+	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
 	 */
 	public Data get(String key)
 	{
@@ -379,4 +379,10 @@ public abstract class Config extends Manager.Type
 	{
 		return all(entity.type());
 	}
+	
+	/**
+	 * Returns all the values for all the parameters of all entity types.
+	 * @return all parameters and their value grouped by entity type
+	 */
+	public abstract Map<String, Map<String, Data>> all();
 }

@@ -147,7 +147,7 @@ public class Parameter implements Documented
 		if( s.length() == 0 && optional() ) return true;
 		if( s.length() < min() || s.length() > max() ) return false;
 		if( values().size() > 0 && !values().contains(s) ) return false;
-		if( rule() != null ) return rule().test(s);
+		if( rule() != null && !rule().test(s) ) return false;
 		return true;
 	};
 	

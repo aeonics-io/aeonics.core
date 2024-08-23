@@ -1,7 +1,17 @@
 package local;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
+
 import aeonics.Boot;
 import aeonics.Plugin;
+import aeonics.Protocols;
+import aeonics.entity.Registry;
+import aeonics.entity.Storage;
 import aeonics.manager.Lifecycle;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
@@ -40,6 +50,24 @@ public class Main extends Plugin
 	
 	public void start()
 	{
+		Protocols.register("storage", new URLStreamHandler()
+		{
+			protected URLConnection openConnection(URL u) throws IOException 
+			{
+				Storage.Type s = Registry.of(Storage.class).get(u.getHost());
+				if( s == null ) throw new IOException("Storage " + u.getHost() + " not found");
+				byte[] content = s.get(u.getFile());
+				if( content == null ) throw new IOException("Path " + u.getFile() + " not found on storage " + u.getHost());
+				
+				return new URLConnection(u)
+				{
+					public void connect() { connected = true; }
+					@Override
+					public InputStream getInputStream() { return new ByteArrayInputStream(content); }
+				};
+			}
+		});
+		
 		Boot.spark(() ->
 		{
 			// =============================

@@ -11,7 +11,7 @@ import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
 import aeonics.util.StringUtils;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 
 /**
  * This item plays a role in the definition of the {@link Security}.
@@ -32,8 +32,8 @@ import aeonics.util.Tuple;
  */
 public class User extends Item<User.Type>
 {
-	public static final User.Type ANONYMOUS = new User().template().build(Data.map().put("__internal", true).put("__id", "10000000-1100000000000000")).name("ANONYMOUS");
-	public static final User.Type SYSTEM = new User().template().build(Data.map().put("__internal", true).put("__id", "10000000-1200000000000000")).name("SYSTEM");
+	public static final User.Type ANONYMOUS = new User().template().build(Data.map().put("__id", "10000000-1100000000000000")).name("ANONYMOUS").internal(true);
+	public static final User.Type SYSTEM = new User().template().build(Data.map().put("__id", "10000000-1200000000000000")).name("SYSTEM").internal(true);
 	
 	/**
 	 * Superclass for all user entities.

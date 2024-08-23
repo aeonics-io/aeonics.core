@@ -1,6 +1,8 @@
 package aeonics.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
@@ -41,7 +43,7 @@ import aeonics.manager.Manager;
  * <p>Consider using one of the {@link #once(Consumer)} variants for handlers that should execute only once.</p>
  * @param <T> the value type
  */
-public class Callback<T>
+public class Callback<T> implements Iterable<Consumer<T>>
 {
 	/**
 	 * This class specified that a callback handler should only run once and then be removed from the list of handlers.
@@ -127,5 +129,15 @@ public class Callback<T>
 				finally { if( h instanceof Once ) remove(h); }
 			}
 		});
+	}
+
+	/**
+	 * Provides an unmodifiable iterator over registered handlers for this callback.
+	 * Note that the iterator is not thread safe in case handlers are added or removed
+	 * during iteration.
+	 */
+	public Iterator<Consumer<T>> iterator()
+	{
+		return Collections.unmodifiableCollection(handlers).iterator();
 	}
 }

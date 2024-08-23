@@ -511,14 +511,14 @@ public abstract class Monitor extends Manager.Type
 	 * @param name the name of the probe
 	 * @param probe the probe
 	 */
-	public static void add(String name, Probe probe) { probes.put(name, probe); }
+	public static void addProbe(String name, Probe probe) { probes.put(name, probe); }
 	
 	/**
 	 * Unregisters a probe
 	 * @see Monitor.Probe
 	 * @param name the name of the probe
 	 */
-	public static void remove(String name) { probes.remove(name); }
+	public static void removeProbe(String name) { probes.remove(name); }
 	
 	/**
 	 * Provides an iterable over registered probes.

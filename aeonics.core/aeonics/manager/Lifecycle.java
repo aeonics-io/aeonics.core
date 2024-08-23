@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import aeonics.Plugin;
-import aeonics.entity.Registry;
+import aeonics.entity.Origin;
 import aeonics.template.Factory;
 import aeonics.template.Template;
 import aeonics.util.Callback;
@@ -29,21 +29,45 @@ import aeonics.util.Callback.Once;
  * 
  * <p>The lifecycle phases will always happen in this sequence:</p>
  * <ol>
- * <li>{@link Phase#LOAD} : when all plugins have been preloaded using {@link Plugin#start()}, the load phase
- * begins. The load phase should be used to register {@link Factory} items and declare {@link Config} parameters.
- * In this phase, only the {@link Lifecycle} and {@link Logger} managers can be used. The {@link Config} manager does not contain populated values yet
- * but it can be used to define parameters.</li>
- * 
- * <li>{@link Phase#CONFIG}: after the load phase is compelte, the config phase begins. The {@link Config} and {@link Snapshot} managers 
- * are now populated. The config phase should be used to register {@link Registry} items. 
- * The latest snapshot (if available) will be restored in this phase also. 
- * Remaining managers will be set and configured but may not be already available for you to use.</li>
- * 
- * <li>{@link Phase#RUN}: after the config phase is complete, the run phase begins. Everything should be ready and it is time to start the system
- * using the {@link Executor} if needed.</li>
- * 
- * <li>{@link Phase#SHUTDOWN}: after the run phase, the shutdown phase indicates a full system shutdown.
- * In this phase, you should cleanup all resources and prepare for shutdown.</li>
+ * 		<li>{@link Phase#BOOT}: this is the initial state and it does not raise any events.</li>
+ * 		<li>{@link Phase#LOAD}: when all plugins have been preloaded using {@link Plugin#start()}, the load phase begins.
+ * 			<ol>
+ * 				<li><b>before:</b> in this stage, you may perform some of your own initialization logic but it should not rely on any
+ * 					other plugin, managers, registry or factory. All managers are created during this stage.</li>
+ * 				<li><b>during:</b> all the managers are available but not populated yet. At this stage,
+ * 					you can register {@link Factory} items and declare {@link Config} parameters.</li>
+ * 				<li><b>after:</b> this step is the last moment to register an initial {@link Snapshot#onRestore(java.util.function.Consumer)} 
+ * 					handler.</li>
+ * 			</ol>
+ * 		</li>
+ * 		<li>{@link Phase#CONFIG}: when managers and entity types are registered, the initial configuration loading begins.
+ * 			<ol>
+ * 				<li><b>before:</b> in this stage, the initial snapshot restore happens. It means that the default config and registry is
+ * 					being populated now and will only be available in the next stage. Although, you may perform some restore and initialization,
+ * 					or defer it for the next phase by keeping a reference to the restore data.</li>
+ * 				<li><b>during:</b> The config manager is now fully populated thanks to the snapshot restore operation. The registry is also
+ * 					populated with restored entities and you can also register your own entities.</li>
+ * 				<li><b>after:</b> if you need to act on existing registry items, it may be a convenient time to do so.</li>
+ * 			</ol>
+ * 		</li>
+ * 		<li>{@link Phase#RUN}: everything is setup and populated, so the system is entering the run phase.
+ * 			<ol>
+ * 				<li><b>before:</b> in this stage, the {@link Logger} manager is started instead of simple stdout. In case there is no security provider
+ * 					defined from the previous stage, a default one is created with basic permissive security rules. 
+ * 					All the managers that have active components are starting in this phase.</li>
+ * 				<li><b>during:</b> in this stage, you can start your own entities, use the network and executor managers.
+ * 					All {@link Origin} entities will be started automatically in this phase.</li>
+ * 				<li><b>after:</b> this is the last stage for the normal startup sequence. </li>
+ * 			</ol>
+ * 		</li>
+ * 		<li>{@link Phase#SHUTDOWN}: when the system is requested to stop, the shutdown phase begins.
+ * 			<ol>
+ * 				<li><b>before:</b> you may handle some business logic before other elements apply their shutdown sequence.</li>
+ * 				<li><b>during:</b> all executor tasks are being terminated, the network is closing and everything gets ready for shutdown.</li>
+ * 				<li><b>after:</b> in this stage, you shall not use any managers, registry or factory anymore.
+ * 					The logger is falling back to stdout and all remaining {@link Origin} entities are stopped.</li>
+ * 			</ol>
+ * 		</li>
  * </ol>
  */
 public abstract class Lifecycle extends Manager.Type
@@ -58,6 +82,10 @@ public abstract class Lifecycle extends Manager.Type
 	 */
 	public enum Phase
 	{
+		/**
+		 * When the system is booting and has not started loading yet
+		 */
+		BOOT,
 		/**
 		 * When the system is loading
 		 */
@@ -77,6 +105,12 @@ public abstract class Lifecycle extends Manager.Type
 	}
 	
 	/**
+	 * Returns the current lifecycle phase
+	 * @return the current lifecycle phase
+	 */
+	public abstract Phase phase();
+	
+	/**
 	 * Initiates the boot sequence.
 	 * This method <b>must</b> return only after the {@link Phase#SHUTDOWN} is complete.
 	 */
@@ -94,7 +128,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public void before(Phase phase, Once<Void> handler) 
+	public static void before(Phase phase, Once<Void> handler) 
 	{
 		synchronized(phase) { before.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
 	}
@@ -104,7 +138,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the phase
 	 * @return the matching callback
 	 */
-	protected Callback<Void> before(Phase phase) { return before.getOrDefault(phase, new Callback<Void>()); }
+	protected static Callback<Void> before(Phase phase) { return before.getOrDefault(phase, new Callback<Void>()); }
 
 	/**
 	 * The on callbacks
@@ -117,7 +151,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public void on(Phase phase, Once<Void> handler) 
+	public static void on(Phase phase, Once<Void> handler) 
 	{
 		synchronized(phase) { on.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
 	}
@@ -127,7 +161,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the phase
 	 * @return the matching callback
 	 */
-	protected Callback<Void> on(Phase phase) { return on.getOrDefault(phase, new Callback<Void>()); }
+	protected static Callback<Void> on(Phase phase) { return on.getOrDefault(phase, new Callback<Void>()); }
 
 	/**
 	 * The after callbacks
@@ -140,7 +174,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public void after(Phase phase, Once<Void> handler)
+	public static void after(Phase phase, Once<Void> handler)
 	{
 		synchronized(phase) { after.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
 	}
@@ -150,7 +184,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the phase
 	 * @return the matching callback
 	 */
-	protected Callback<Void> after(Phase phase) { return after.getOrDefault(phase, new Callback<Void>()); }
+	protected static Callback<Void> after(Phase phase) { return after.getOrDefault(phase, new Callback<Void>()); }
 	
 	/**
 	 * Default initial lifecycle template and entity implementation
@@ -161,6 +195,7 @@ public abstract class Lifecycle extends Manager.Type
 		{
 			@Override
 			public void boot() { throw new IllegalStateException("Cannot boot on this manager"); }
+			public Phase phase() { return Phase.BOOT; }
 		}
 
 		@Override
@@ -177,8 +212,8 @@ public abstract class Lifecycle extends Manager.Type
 	}
 	
 	/**
-	 * Default logger to the console.
-	 * This is used when the actual logger is not (yet/longer) available
+	 * Default inert lifecycle.
+	 * This is used when the actual lifecycle implementation is not yet available
 	 * @hidden
 	 */
 	@Internal

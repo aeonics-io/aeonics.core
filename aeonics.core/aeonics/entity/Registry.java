@@ -294,6 +294,12 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	}
 	
 	/**
+	 * Returns the number of entities in this registry.
+	 * @return the number of entities in this registry
+	 */
+	public int size() { return entities.size(); }
+	
+	/**
 	 * Returns an iterator over all entities registered in this registry
 	 * @return an entity iterator
 	 */

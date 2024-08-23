@@ -1,10 +1,11 @@
 package aeonics.manager;
 
 import java.util.Collection;
-import java.util.function.Consumer;
 
 import aeonics.data.Data;
 import aeonics.manager.Executor.Task;
+import aeonics.util.Callback;
+import aeonics.util.Functions.Consumer;
 
 /**
  * Manages restore points of the system.
@@ -19,12 +20,22 @@ public abstract class Snapshot extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Snapshot.class; }
 	
 	/**
+	 * The snapshot create callback
+	 */
+	protected static Callback<Data> createCallback = new Callback<Data>();
+	
+	/**
 	 * Adds an event handler to react to the current snapshot phase.
 	 * Implementations may store elements in the provided data object that will be persisted at the end of the snapshot phase.
 	 * For isolation purposes, a new empty data object will be provided per plugin (java module scope).
 	 * @param handler the snapshot handler
 	 */
-	public abstract void onSnapshot(Consumer<Data> handler);
+	public static void onSnapshot(Consumer<Data> handler) { createCallback.then(handler); }
+	
+	/**
+	 * The snapshot restore callback
+	 */
+	protected static Callback<Data> restoreCallback = new Callback<Data>();
 	
 	/**
 	 * Adds an event handler to react to the current restore phase.
@@ -32,7 +43,7 @@ public abstract class Snapshot extends Manager.Type
 	 * For isolation purposes, each plugin (java module scope) will be given its own data object.
 	 * @param handler the restore handler
 	 */
-	public abstract void onRestore(Consumer<Data> handler);
+	public static void onRestore(Consumer<Data> handler) { restoreCallback.then(handler); }
 	
 	/**
 	 * Creates a new snapshot using the specified suffix while the prefix is usually the date of the snapshot.

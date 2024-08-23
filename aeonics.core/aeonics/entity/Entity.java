@@ -6,22 +6,25 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import aeonics.data.Data;
 import aeonics.manager.Config;
+import aeonics.manager.Manager;
+import aeonics.manager.Snapshot;
 import aeonics.template.Factory;
 import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
 import aeonics.util.Callback;
+import aeonics.util.CheckCaller;
 import aeonics.util.Exportable;
 import aeonics.util.Internal;
+import aeonics.util.Snapshotable;
 import aeonics.util.StringUtils;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 
 /**
  * An Entity is the basic building block that composes the system. It is the definition of a class that can be instanciated at runtime
@@ -33,7 +36,7 @@ import aeonics.util.Tuple;
  * <p>Most of the time, the entity category will be enforced using a <code>final</code> override. The type will less likely be enforced to
  * allow subclasses to extend an existing type.</p>
  */
-public class Entity implements Exportable
+public class Entity implements Exportable, Snapshotable
 {
 	/**
 	 * Default constructor that checks if the entity has been created using a {@link Template}.
@@ -41,15 +44,7 @@ public class Entity implements Exportable
 	 */
 	public Entity()
 	{
-		StackWalker walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
-		Optional<StackWalker.StackFrame> valid = walker.walk(frames -> 
-			frames.filter(frame ->
-				frame.getMethodName().equals("build") 
-				&& frame.getDeclaringClass().isAssignableFrom(Template.class)
-			).findFirst()
-		);
-		if( valid.isEmpty() )
-			throw new IllegalCallerException("An entity can only be constructed from a template.");
+		CheckCaller.require(Template.class, "build");
 	}
 	
 	/**
@@ -487,8 +482,60 @@ public class Entity implements Exportable
 	 */
 	public Callback<Void> onCreate() { return onCreate; }
 	
+	/**
+	 * The default entity export implementation includes informational metadata fields
+	 * as well as all declared {@link #parameters()} and all declared {@link #relationships()}.
+	 * 
+	 * <p>If there are potentially private or confidential data returned by the default implementation,
+	 * you should override it and modify the result before returning it.</p>
+	 * 
+	 * <p>Note that you may provide your own custom implementation although it may introduce inconsistencies with
+	 * the frontent application in case of unexpected format or missing information. Therefore, it is always
+	 * prefeable to call <code>super.export()</code> and manipulate the result instead.</p>
+	 */
 	public Data export()
 	{
+		Data d = Data.map()
+			.put("__id", id())
+			.put("__name", name())
+			.put("__internal", internal())
+			.put("__category", category())
+			.put("__type", type())
+			.put("__class", getClass().getName())
+			.put("__plugin", getClass().getModule().getName());
+		
+		for( Tuple<Data, Parameter> t : parameters.values() )
+			d.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
+		for( Tuple<List<Data>, Relationship> t : relationships.values() )
+		{
+			Data l = Data.list();
+			for( Data x : t.a ) l.add(x);
+			d.put(t.b.name(), l);
+		}
+		
+		return d;
+	}
+	
+	/**
+	 * The default entity snapshot implementation includes the required metadata fields
+	 * to be used by the {@link Template} to restore it. It also includes all declared
+	 * {@link #parameters()} and all declared {@link #relationships()}.
+	 * 
+	 * <p>If this behavior is sufficient, you do not need to override this method.
+	 * If there is additionnal data to be included in (or removed from) the output, then
+	 * you should override this method, call the <code>super.snapshot()</code> and work on
+	 * the returned data.</p>
+	 * 
+	 * <p>You may provide your own custom implementation although it may introduce inconsistencies with
+	 * the rest of the system.</p>
+	 * 
+	 * <p>In order to safeguard the potentially private or confidential data returned by this method out of necessity,
+	 * a check on the caller is performed to allow only the current {@link Snapshot} implementation.</p>
+	 */
+	public Data snapshot()
+	{
+		CheckCaller.require(Manager.of(Snapshot.class).getClass(), null);
+		
 		Data d = Data.map()
 			.put("__id", id())
 			.put("__name", name())

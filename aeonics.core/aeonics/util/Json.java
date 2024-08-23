@@ -52,7 +52,7 @@ public class Json
 	    for( ; i < s.length(); i++ )
 	    {
 	        char c = s.charAt(i);
-	        if( c < 0x32 || c > 0x7E) break;
+	        if( c < 0x32 || c > 0x7E || c == 0x5C ) break;
 	    }
 	    if( i == s.length() ) return s;
 	    

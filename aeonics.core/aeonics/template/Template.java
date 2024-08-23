@@ -17,7 +17,7 @@ import aeonics.manager.Manager;
 import aeonics.util.Documented;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 
 /**
  * A Template is used to document and create an {@link Entity} from user input.
@@ -349,9 +349,6 @@ public class Template<T extends Entity> implements Documented
 	{
 		if( data == null ) data = Data.map();
 		
-		boolean internal = false;
-		if( data.containsKey("__internal") ) internal = data.asBool("__internal");
-		
 		if( data.containsKey("__category") && !category().equals(data.asString("__category")) )
 			throw new RuntimeException("Entity category mismatch");
 		
@@ -362,8 +359,13 @@ public class Template<T extends Entity> implements Documented
 		if( creator == null )
 			throw new RuntimeException("No creator defined for this template");
 		T instance = creator.get();
+		
 		if( !target().isInstance(instance) )
 			throw new RuntimeException("Entity instance does not match the target type");
+		
+		boolean internal = instance.internal();
+		if( data.containsKey("__internal") ) internal = data.asBool("__internal");
+		
 		instance.initialize(category(), StringUtils.toLowerCase(type()), data.asString("__id"), internal);
 		if( !instance.category().equals(category()) )
 			throw new RuntimeException("Entity category mismatch: " + instance.category() + " <> " + category());

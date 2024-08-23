@@ -1,6 +1,5 @@
 module aeonics.core
 {
-	requires java.compiler;
 	requires jdk.management;
 	requires java.sql;
 	requires aeonics.boot;

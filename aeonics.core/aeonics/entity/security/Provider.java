@@ -139,9 +139,9 @@ public abstract class Provider extends Item<Provider.Type>
 		public final String category() { return StringUtils.toLowerCase(Provider.class); }
 
 		@Override
-		public Data export()
+		public Data snapshot()
 		{
-			return super.export().put("__key", key);
+			return super.snapshot().put("__key", key);
 		}
 	}
 
@@ -222,14 +222,28 @@ public abstract class Provider extends Item<Provider.Type>
 			
 			public synchronized User.Type join(Data context, User.Type existing)
 			{
-				if( context == null || !context.isMap() || !context.containsKey("username") || !context.containsKey("password") ) return null;
-				long complexity = complexity(context.asString("password"));
-				if( complexity < valueOf("complexity").asLong() )
+				if( context == null || !context.isMap() || !context.containsKey("username") ) return null;
+				
+				Data priv = Data.map().put("hash", null).put("salt", null);
+				
+				if( context.containsKey("password") )
 				{
-					Manager.of(Logger.class).warning(this.getClass(), "Password complexity requirement not met");
-					return null;
+					long complexity = complexity(context.asString("password"));
+					if( complexity < valueOf("complexity").asLong() )
+					{
+						Manager.of(Logger.class).warning(this.getClass(), "Password complexity requirement not met");
+						return null;
+					}
+	
+					priv.put("salt", Manager.of(Security.class).randomHash());
+					priv.put("password", Manager.of(Security.class).hash(context.asString("password"), priv.asString("salt")));
 				}
-
+				else if( context.containsKey("hash") && context.containsKey("salt") )
+				{
+					priv.put("salt", context.get("salt"));
+					priv.put("password", context.get("hash"));
+				}
+				
 				// check for clash
 				if( existing == null )
 				{
@@ -242,13 +256,10 @@ public abstract class Provider extends Item<Provider.Type>
 					existing = Factory.of(User.class).get(User.class).build().name(context.asString("username"));
 
 				// already joined
-				Data priv = privateData(existing);
-				if( !priv.isEmpty() ) return existing;
-				priv = Data.map().put("salt", Manager.of(Security.class).randomHash());
+				if( !privateData(existing).isEmpty() ) return existing;
 				
-				// hash the pass
-				String hash = Manager.of(Security.class).hash(context.asString("password"), priv.asString("salt"));
-				privateData(existing, priv.put("password", hash));
+				// newly joined
+				privateData(existing, priv);
 				
 				return existing;
 			}

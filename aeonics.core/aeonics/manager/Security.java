@@ -1,5 +1,6 @@
 package aeonics.manager;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -28,6 +29,15 @@ public abstract class Security extends Manager.Type
 	 * @return a random hash in hex format
 	 */
 	public abstract String randomHash();
+	
+	/**
+	 * Produces a strong cryptographic hash of the target input data.
+	 * The hash is not salted.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the input stream to hash
+	 * @return the hashed value in hex format
+	 */
+	public abstract String hash(InputStream value);
 	
 	/**
 	 * Produces a strong cryptographic hash of the input value.

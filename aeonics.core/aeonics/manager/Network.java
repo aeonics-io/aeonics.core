@@ -3,7 +3,9 @@ package aeonics.manager;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -36,7 +38,7 @@ import aeonics.data.Data;
 import aeonics.manager.Executor.Task;
 import aeonics.util.Callback;
 import aeonics.util.Internal;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 
 /**
  * Creates and manages network connections
@@ -89,40 +91,107 @@ public abstract class Network extends Manager.Type
 		 * Exposes the server connection with the provided certificate to all clients.
 		 * @param certificate the server certificate
 		 * @param key the matching private key
+		 * @param chain the complete certificate chain. If null, or if the chain does not start with the original certificate, it will be prepended to the chain.
 		 * @return this
 		 */
-		public SecurityOptions withServerCertificate(X509Certificate certificate, PrivateKey key)
+		public SecurityOptions withServerCertificate(X509Certificate certificate, PrivateKey key, X509Certificate[] chain)
 		{
 			if( certificate == null || key == null ) serverCertificate = null;
 			else serverCertificate = new Tuple<X509Certificate, PrivateKey>(certificate, key);
+			
+			if( chain == null || chain.length == 0 ) serverCertificateChain = new X509Certificate[] { certificate };
+			else if( !chain[0].equals(certificate) )
+			{
+				serverCertificateChain = new X509Certificate[chain.length + 1];
+				serverCertificateChain[0] = certificate;
+				System.arraycopy(chain, 0, serverCertificateChain, 1, chain.length);
+			}
+			else
+				serverCertificateChain = chain;
+			
 			return this; 
 		}
 		
 		/**
 		 * Exposes the server connection with the provided PEM-encoded certificate to all clients.
-		 * @param certificate the PEM-encoded server certificate
-		 * @param key the matching PEM-encoded private key
+		 * @param certificate the PEM-encoded server certificate, or a valid 'storage://' URL
+		 * @param key the matching PEM-encoded private key, or a valid 'storage://' URL
+		 * @param chain the PEM-encoded server certificate, or a valid 'storage://' URL. If null, or if the chain does not start with the original certificate, it will be prepended to the chain. 
 		 * @return this
 		 * @throws Exception if the provided arguments cannot be converted to valid X509Certificate and PrivateKey
 		 */
-		public SecurityOptions withServerCertificate(String certificate, String key) throws Exception
+		public SecurityOptions withServerCertificate(String certificate, String key, String chain) throws Exception
 		{
 			if( certificate == null || key == null ) { serverCertificate = null; return this; }
 			
+			// =============
+			// CERTIFICATE
+			// =============
+			
+			InputStream certData = null;
+			if( certificate.startsWith("storage://") )
+				certData = new URL(certificate).openConnection().getInputStream();
+			else
+				certData = new ByteArrayInputStream(certificate.getBytes(StandardCharsets.ISO_8859_1));
+			
 			CertificateFactory factory = CertificateFactory.getInstance("X.509");
-			Object[] os = factory.generateCertificates(new ByteArrayInputStream(certificate.getBytes(StandardCharsets.ISO_8859_1))).toArray();
+			Object[] os = factory.generateCertificates(certData).toArray();
+			if( os.length == 0 ) throw new IllegalArgumentException("Invalid certificate");
 			X509Certificate[] certs = new X509Certificate[os.length];
 			for( int i = 0; i < os.length; i++ )
 				certs[i] = (X509Certificate) os[i];
 			X509Certificate cert = certs[0];
 			
-			key = key.replaceAll("\r?\n", "").replaceFirst(".*?-+[A-Z ]+-+", "").replaceFirst("-+[A-Z ]+-+.*$", "");
-			byte[] pk = Base64.getDecoder().decode(key);
+			// =============
+			// CHAIN
+			// =============
+			
+			X509Certificate[] chainCerts = certs;
+		
+			if( chain != null )
+			{
+				InputStream chainData = null;
+				if( chain.startsWith("storage://") )
+					chainData = new URL(chain).openConnection().getInputStream();
+				else
+					chainData = new ByteArrayInputStream(chain.getBytes(StandardCharsets.ISO_8859_1));
+				
+				os = factory.generateCertificates(chainData).toArray();
+				
+				if( os.length > 0 )
+				{
+					int offset = 0;
+					if( !cert.equals((X509Certificate) os[0]) )
+					{
+						chainCerts = new X509Certificate[os.length + 1];
+						offset = 1;
+						chainCerts[0] = cert;
+					}
+					else
+						chainCerts = new X509Certificate[os.length];
+					
+					for( int i = 0; i < os.length; i++ )
+						chainCerts[i + offset] = (X509Certificate) os[i];
+				}
+			}
+			
+			// =============
+			// PRIVATE KEY
+			// =============
+			
+			String keyData = null;
+			if( certificate.startsWith("storage://") )
+				keyData = new String(new URL(certificate).openConnection().getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
+			else
+				keyData = key;
+			
+			keyData = keyData.replaceAll("\r?\n", "").replaceFirst(".*?-+[A-Z ]+-+", "").replaceFirst("-+[A-Z ]+-+.*$", "");
+			byte[] pk = Base64.getDecoder().decode(keyData);
 			PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(pk);
 			KeyFactory factory2 = KeyFactory.getInstance(cert.getPublicKey().getAlgorithm());
 			PrivateKey key2 = factory2.generatePrivate(spec);
 			
-			return withServerCertificate(cert, key2);
+			return withServerCertificate(cert, key2, chainCerts);
 		}
 		
 		/**
@@ -139,12 +208,25 @@ public abstract class Network extends Manager.Type
 		public Tuple<X509Certificate, PrivateKey> serverCertificate() { return serverCertificate; }
 		
 		/**
+		 * The server certificate chain (including the main server certificate as first element)
+		 */
+		private X509Certificate[] serverCertificateChain = null;
+		
+		/**
+		 * Returns the server certificate chain with the main server certificate as first element
+		 * @return the server certificate chain
+		 * @hidden
+		 */
+		@Internal
+		public X509Certificate[] serverCertificateChain() { return serverCertificateChain; }
+		
+		/**
 		 * Sets a certificate selection function for the server based on the Server Name Indication (SNI) sent by the client.
 		 * The SNI may be null if it was not provided by the client.
-		 * @param selector the selection function that accepts the SNI and returns a tuple with the server certificate and its key
+		 * @param selector the selection function that accepts the SNI and returns a tuple with the server certificate chain and its key
 		 * @return this
 		 */
-		public SecurityOptions withServerCertificate(Function<String, Tuple<X509Certificate, PrivateKey>> selector)
+		public SecurityOptions withServerCertificate(Function<String, Tuple<X509Certificate[], PrivateKey>> selector)
 		{
 			serverCertificateSelector = selector;
 			return this;
@@ -153,7 +235,7 @@ public abstract class Network extends Manager.Type
 		/**
 		 * The server certificate selector
 		 */
-		private Function<String, Tuple<X509Certificate, PrivateKey>> serverCertificateSelector = null;
+		private Function<String, Tuple<X509Certificate[], PrivateKey>> serverCertificateSelector = null;
 		
 		/**
 		 * Returns the server certificate selector
@@ -161,7 +243,7 @@ public abstract class Network extends Manager.Type
 		 * @hidden
 		 */
 		@Internal
-		public Function<String, Tuple<X509Certificate, PrivateKey>> serverCertificateSelector() { return serverCertificateSelector; }
+		public Function<String, Tuple<X509Certificate[], PrivateKey>> serverCertificateSelector() { return serverCertificateSelector; }
 		
 		/**
 		 * Sets a certificate verifier that can be used by the server to validate client certificates.
@@ -329,13 +411,13 @@ public abstract class Network extends Manager.Type
 				}
 				if( options != null && !clientMode )
 				{
-					Tuple<X509Certificate, PrivateKey> key = options.serverCertificate();
-					if( key != null ) return new X509Certificate[] { key.a };
-					Function<String, Tuple<X509Certificate, PrivateKey>> sni = options.serverCertificateSelector();
+					X509Certificate[] chain = options.serverCertificateChain();
+					if( chain != null ) return chain;
+					Function<String, Tuple<X509Certificate[], PrivateKey>> sni = options.serverCertificateSelector();
 					if( sni != null )
 					{
-						key = sni.apply(alias == null || alias.equals(this.alias) ? null : alias);
-						if( key != null ) return new X509Certificate[] { key.a };
+						Tuple<X509Certificate[], PrivateKey> key = sni.apply(alias == null || alias.equals(this.alias) ? null : alias);
+						if( key != null ) return key.a;
 					}
 				}
 				return null;
@@ -352,11 +434,11 @@ public abstract class Network extends Manager.Type
 				{
 					Tuple<X509Certificate, PrivateKey> key = options.serverCertificate();
 					if( key != null ) return key.b;
-					Function<String, Tuple<X509Certificate, PrivateKey>> sni = options.serverCertificateSelector();
+					Function<String, Tuple<X509Certificate[], PrivateKey>> sni = options.serverCertificateSelector();
 					if( sni != null )
 					{
-						key = sni.apply(alias == null || alias.equals(this.alias) ? null : alias);
-						if( key != null ) return key.b;
+						Tuple<X509Certificate[], PrivateKey> key2 = sni.apply(alias == null || alias.equals(this.alias) ? null : alias);
+						if( key2 != null ) return key2.b;
 					}
 				}
 				return null;

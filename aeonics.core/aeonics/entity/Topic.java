@@ -13,7 +13,7 @@ import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
 import aeonics.util.StringUtils;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 
 /**
  * This class represents a publishing topic for messages.

@@ -33,20 +33,20 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	/**
 	 * Fetches the factory of the given entity category.
 	 * @param <U> The entity category
-	 * @param type The entity category (should be or will be converted to lower case)
+	 * @param category The entity category (should be or will be converted to lower case)
 	 * @return The factory containing all {@link Template} for the specified category
 	 */
-	public static <U extends Entity> Factory<U> of(String type)
+	public static <U extends Entity> Factory<U> of(String category)
 	{
-		type = StringUtils.toLowerCase(type);
-		factories.computeIfAbsent(type, (t) -> new Factory<U>(t));
-		return (Factory<U>) factories.get(type);
+		category = StringUtils.toLowerCase(category);
+		factories.computeIfAbsent(category, (t) -> new Factory<U>(t));
+		return (Factory<U>) factories.get(category);
 	}
 	
 	/**
 	 * Fetches the template that can be used to create or modify the specified entity.
 	 * @param <U> The entity category
-	 * @param instance The entity category (should be or will be converted to lower case)
+	 * @param instance The entity to fetch the category (should be or will be converted to lower case)
 	 * @return The factory containing all {@link Template} for the specified category
 	 */
 	public static <U extends Entity> Template<U> of(Entity instance)
@@ -57,13 +57,13 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	
 	/**
 	 * Checks if the factory of the given entity category exists.
-	 * @param type The entity category (should be or will be converted to lower case)
+	 * @param category The entity category (should be or will be converted to lower case)
 	 * @return true if the factory of the given entity category exists
 	 */
-	public static boolean has(String type)
+	public static boolean has(String category)
 	{
-		type = StringUtils.toLowerCase(type);
-		return factories.containsKey(type);
+		category = StringUtils.toLowerCase(category);
+		return factories.containsKey(category);
 	}
 	
 	/**
@@ -92,7 +92,7 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	}
 	
 	/**
-	 * Builds an instance of the exported entity.
+	 * Builds an instance of the exported or snapshotted entity.
 	 * @param <U> The entity type
 	 * @param data the exported entity data
 	 * @return the entity
@@ -106,7 +106,7 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 			throw new IllegalArgumentException("Invalid input data");
 		Template<U> template = Factory.of(data.asString("__category")).get(data.asString("__type"));
 		if( template == null )
-			throw new RuntimeException("No template found for " + data.asString("__category") + "." + data.asString("__type"));
+			throw new RuntimeException("No template found for " + data.asString("__category") + " > " + data.asString("__type"));
 		return template.build(data);
 	}
 	

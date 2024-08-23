@@ -21,7 +21,7 @@ import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
-import aeonics.util.Tuple;
+import aeonics.util.Tuples.Tuple;
 
 /**
  * This class represents the Origin of data. It is the starting point of a data flow. 
@@ -245,7 +245,7 @@ public abstract class Origin extends Item<Origin.Type>
 		}
 		
 		/**
-		 * Sets the inlune start function as an alternative to {@link #start()}.
+		 * Sets the inline start function as an alternative to {@link #start()}.
 		 * @param <T> this
 		 * @param starter the start function
 		 * @return this

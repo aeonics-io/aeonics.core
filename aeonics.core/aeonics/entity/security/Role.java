@@ -18,7 +18,7 @@ import aeonics.util.StringUtils;
  */
 public class Role extends Item<Role.Type>
 {
-	public static final Role.Type SUPERADMIN = new Role().template().build(Data.map().put("__internal", true).put("__id", "10000000-2100000000000000")).name("SUPERADMIN");
+	public static final Role.Type SUPERADMIN = new Role().template().build(Data.map().put("__id", "10000000-2100000000000000")).name("SUPERADMIN").internal(true);
 	
 	/**
 	 * Superclass for all role entities.
