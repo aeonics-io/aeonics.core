@@ -33,8 +33,6 @@ public class Main extends Plugin
 		int initialLevel = Integer.parseInt(level);
 		System.setProperty("AEONICS_MANAGER_LOGGER_LEVEL", ""+initialLevel);
 
-		Logger.CONSOLE.level(initialLevel);
-		
 		try
 		{
 			// this is necessary to initialize the static properties

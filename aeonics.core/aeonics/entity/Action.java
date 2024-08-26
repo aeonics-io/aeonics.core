@@ -8,11 +8,14 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
+import aeonics.manager.Logger;
+import aeonics.manager.Manager;
 import aeonics.template.Channel;
 import aeonics.template.Factory;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Relationship;
+import aeonics.util.Functions.TriFunction;
 import aeonics.util.StringUtils;
 
 /**
@@ -165,29 +168,12 @@ public abstract class Action extends Item<Action.Type>
 	 */
 	@SuppressWarnings("unchecked")
 	public static class Type extends Entity
-	{
-		/**
-		 * Processing function interface
-		 */
-		public static interface Process
-		{
-			/**
-			 * This method is called when data is available. The input channel is provided as a hint on the intended behavior,
-			 * and the list of meaningful output channels is also provided as a hint.
-			 * @param message the input data
-			 * @param input the input channel name
-			 * @param outputs the list of meaningful output channels
-			 * @return a map with all output channels bound to a message. Any channel may be included in the response, with or without messgage (null).
-			 * Although, for sobriety, it is best if only requested output channels that did produce a message be included in the result.
-			 */
-			public Map<String, Message> accept(Message message, String input, Set<String> outputs);
-		}
-		
+	{	
 		/**
 		 * This method is called when data is available. The input channel is provided as a hint on the intended behavior,
 		 * and the list of meaningful output channels is also provided as a hint.
 		 * 
-		 * <p>If you do not specify the processing function using {@link #process(Process)}, you can override this method 
+		 * <p>If you do not specify the processing function using {@link #process(TriFunction)}, you can override this method 
 		 * to define a custom behavior.</p>
 		 * 
 		 * @param message the input data
@@ -198,14 +184,24 @@ public abstract class Action extends Item<Action.Type>
 		 */
 		public Map<String, Message> accept(Message message, String input, Set<String> outputs)
 		{
-			if( processor != null ) return processor.accept(message, input, outputs);
+			if( processor != null )
+			{
+				try { return processor.apply(message, input, outputs); }
+				catch(Exception e)
+				{
+					Manager.of(Logger.class).warning(getClass(), e);
+					Manager.of(Logger.class).severe("DISCARD", "MESSAGE ERROR");
+					// TODO : discard ?
+					return null;
+				}
+			}
 			else return null;
 		}
 		
 		/**
 		 * Process function
 		 */
-		private Process processor = null;
+		private TriFunction<Message, String, Set<String>, Map<String, Message>> processor = null;
 		
 		/**
 		 * Sets the process function as an alternative to {@link #accept(Message, String, Set)}.
@@ -213,7 +209,7 @@ public abstract class Action extends Item<Action.Type>
 		 * @param processor the process function
 		 * @return this
 		 */
-		public <T extends Action.Type> T process(Process processor) { this.processor = processor; return (T) this; }
+		public <T extends Action.Type> T process(TriFunction<Message, String, Set<String>, Map<String, Message>> processor) { this.processor = processor; return (T) this; }
 		
 		/**
 		 * Hardcoded category to the {@link Action} class

@@ -16,9 +16,9 @@ public class Functions
 	{
 		/**
 		 * Runs.
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public void run() throws Throwable;
+		public void run() throws Exception;
 	}
 	
 	/**
@@ -31,9 +31,9 @@ public class Functions
 		/**
 		 * Gets a result.
 		 * @return the return value
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public R get() throws Throwable;
+		public R get() throws Exception;
 	}
 	
 	// ===================
@@ -51,9 +51,9 @@ public class Functions
 		 * Evaluates this predicate on the given argument.
 		 * @param a the input argument
 		 * @return true if the input argument matches the predicate
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public boolean test(A a) throws Throwable;
+		public boolean test(A a) throws Exception;
 	}
 	
 	/**
@@ -66,9 +66,9 @@ public class Functions
 		/**
 		 * Performs this operation on the given argument.
 		 * @param a the input argument
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public void accept(A a) throws Throwable;
+		public void accept(A a) throws Exception;
 	}
 	
 	/**
@@ -83,9 +83,9 @@ public class Functions
 		 * Applies this function to the given argument.
 		 * @param a the input argument
 		 * @return the return value
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public R apply(A a) throws Throwable;
+		public R apply(A a) throws Exception;
 	}
 	
 	// ===================
@@ -100,15 +100,15 @@ public class Functions
 	@FunctionalInterface
 	public static interface BiPredicate<A, B> extends Predicate<A>
 	{
-		public default boolean test(A a) throws Throwable { return test(a, null); }
+		public default boolean test(A a) throws Exception { return test(a, null); }
 		/**
 		 * Evaluates this predicate on the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
 		 * @return true if the input arguments match the predicate
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public boolean test(A a, B b) throws Throwable;
+		public boolean test(A a, B b) throws Exception;
 	}
 	
 	/**
@@ -119,14 +119,14 @@ public class Functions
 	@FunctionalInterface
 	public static interface BiConsumer<A, B> extends Consumer<A>
 	{
-		public default void accept(A a) throws Throwable { accept(a, null); }
+		public default void accept(A a) throws Exception { accept(a, null); }
 		/**
 		 * Performs this operation on the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public void accept(A a, B b) throws Throwable;
+		public void accept(A a, B b) throws Exception;
 	}
 	
 	/**
@@ -138,15 +138,15 @@ public class Functions
 	@FunctionalInterface
 	public static interface BiFunction<A, B, R> extends Function<A, R>
 	{
-		public default R apply(A a) throws Throwable { return apply(a, null); }
+		public default R apply(A a) throws Exception { return apply(a, null); }
 		/**
 		 * Applies this function to the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
 		 * @return the return value
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public R apply(A a, B b) throws Throwable;
+		public R apply(A a, B b) throws Exception;
 	}
 	
 	// ===================
@@ -162,16 +162,16 @@ public class Functions
 	@FunctionalInterface
 	public static interface TriPredicate<A, B, C> extends BiPredicate<A, B>
 	{
-		public default boolean test(A a, B b) throws Throwable { return test(a, b, null); }
+		public default boolean test(A a, B b) throws Exception { return test(a, b, null); }
 		/**
 		 * Evaluates this predicate on the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
 		 * @param c the input argument
 		 * @return true if the input arguments match the predicate
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public boolean test(A a, B b, C c) throws Throwable;
+		public boolean test(A a, B b, C c) throws Exception;
 	}
 	
 	/**
@@ -183,15 +183,15 @@ public class Functions
 	@FunctionalInterface
 	public static interface TriConsumer<A, B, C> extends BiConsumer<A, B>
 	{
-		public default void accept(A a, B b) throws Throwable { accept(a, b, null); }
+		public default void accept(A a, B b) throws Exception { accept(a, b, null); }
 		/**
 		 * Performs this operation on the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
 		 * @param c the input argument
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public void accept(A a, B b, C c) throws Throwable;
+		public void accept(A a, B b, C c) throws Exception;
 	}
 	
 	/**
@@ -204,16 +204,16 @@ public class Functions
 	@FunctionalInterface
 	public static interface TriFunction<A, B, C, R> extends BiFunction<A, B, R>
 	{
-		public default R apply(A a, B b) throws Throwable { return apply(a, b, null); }
+		public default R apply(A a, B b) throws Exception { return apply(a, b, null); }
 		/**
 		 * Applies this function to the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
 		 * @param c the input argument
 		 * @return the return value
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public R apply(A a, B b, C c) throws Throwable;
+		public R apply(A a, B b, C c) throws Exception;
 	}
 	
 	// ===================
@@ -230,7 +230,7 @@ public class Functions
 	@FunctionalInterface
 	public static interface QuadriPredicate<A, B, C, D> extends TriPredicate<A, B, C>
 	{
-		public default boolean test(A a, B b, C c) throws Throwable { return test(a, b, c, null); }
+		public default boolean test(A a, B b, C c) throws Exception { return test(a, b, c, null); }
 		/**
 		 * Evaluates this predicate on the given arguments.
 		 * @param a the input argument
@@ -238,9 +238,9 @@ public class Functions
 		 * @param c the input argument
 		 * @param d the input argument
 		 * @return true if the input arguments match the predicate
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public boolean test(A a, B b, C c, D d) throws Throwable;
+		public boolean test(A a, B b, C c, D d) throws Exception;
 	}
 	
 	/**
@@ -253,16 +253,16 @@ public class Functions
 	@FunctionalInterface
 	public static interface QuadriConsumer<A, B, C, D> extends TriConsumer<A, B, C>
 	{
-		public default void accept(A a, B b, C c) throws Throwable { accept(a, b, c, null); }
+		public default void accept(A a, B b, C c) throws Exception { accept(a, b, c, null); }
 		/**
 		 * Performs this operation on the given arguments.
 		 * @param a the input argument
 		 * @param b the input argument
 		 * @param c the input argument
 		 * @param d the input argument
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public void accept(A a, B b, C c, D d) throws Throwable;
+		public void accept(A a, B b, C c, D d) throws Exception;
 	}
 	
 	/**
@@ -276,7 +276,7 @@ public class Functions
 	@FunctionalInterface
 	public static interface QuadriFunction<A, B, C, D, R> extends TriFunction<A, B, C, R>
 	{
-		public default R apply(A a, B b, C c) throws Throwable { return apply(a, b, c, null); }
+		public default R apply(A a, B b, C c) throws Exception { return apply(a, b, c, null); }
 		/**
 		 * Applies this function to the given arguments.
 		 * @param a the input argument
@@ -284,8 +284,8 @@ public class Functions
 		 * @param c the input argument
 		 * @param d the input argument
 		 * @return the return value
-		 * @throws Throwable if an error happens
+		 * @throws Exception if an error happens
 		 */
-		public R apply(A a, B b, C c, D d) throws Throwable;
+		public R apply(A a, B b, C c, D d) throws Exception;
 	}
 }

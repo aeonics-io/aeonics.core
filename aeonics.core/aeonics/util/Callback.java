@@ -60,7 +60,7 @@ public class Callback<T> implements Iterable<Consumer<T>>
 		 */
 		public Once(Consumer<U> t) { target = t; }
 		
-		public void accept(U value) throws Throwable
+		public void accept(U value) throws Exception
 		{
 			if( !accepted.compareAndSet(false, true) ) return;
 			target.accept(value);
@@ -125,7 +125,7 @@ public class Callback<T> implements Iterable<Consumer<T>>
 			{
 				if( h == null ) continue;
 				
-				try { h.accept(value); } catch(Throwable t) { t.printStackTrace(); Manager.of(Logger.class).warning(Callback.class, t); }
+				try { h.accept(value); } catch(Exception t) { Manager.of(Logger.class).warning(Callback.class, t); }
 				finally { if( h instanceof Once ) remove(h); }
 			}
 		});

@@ -55,7 +55,7 @@ public abstract class Logger extends Manager.Type
 	/**
 	 * The current log level
 	 */
-	private int level = CONFIG;
+	protected int level = CONFIG;
 	/**
 	 * Returns the current log level
 	 * @return the current log level
@@ -68,7 +68,7 @@ public abstract class Logger extends Manager.Type
 	public synchronized void level(int value)
 	{
 		if( value > level )
-			log(level, Logger.class, "Log level raised from {} to {}", level, value);
+			log(level, Logger.class, "Log level changed from {} to {}", level, value);
 		level = value;
 	}
 	
@@ -721,8 +721,21 @@ public abstract class Logger extends Manager.Type
 	{
 		private static class Implementation extends Logger
 		{
+			public Implementation()
+			{
+				try
+				{
+					this.level = Integer.parseInt(System.getProperty("AEONICS_MANAGER_LOGGER_LEVEL"));
+				}
+				catch(Exception e)
+				{
+					this.level = CONFIG;
+				}
+			}
+			
 			protected void handle(int level, String type, String message, Object... params) 
 			{
+				if( level < level() || message == null || message.isBlank() ) return;
 				System.out.println(toJson(level, type, message, params));
 			}
 		}

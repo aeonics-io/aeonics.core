@@ -36,7 +36,7 @@ import aeonics.util.Callback.Once;
  * 					other plugin, managers, registry or factory. All managers are created during this stage.</li>
  * 				<li><b>during:</b> all the managers are available but not populated yet. At this stage,
  * 					you can register {@link Factory} items and declare {@link Config} parameters.</li>
- * 				<li><b>after:</b> this step is the last moment to register an initial {@link Snapshot#onRestore(java.util.function.Consumer)} 
+ * 				<li><b>after:</b> this step is the last moment to register an initial {@link Snapshot#onRestore(aeonics.util.Functions.Consumer)} 
  * 					handler.</li>
  * 			</ol>
  * 		</li>

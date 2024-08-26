@@ -596,6 +596,14 @@ public interface Data extends Iterable<Data>
 	// NESTED METHODS
 	// ==========================
 	
+	/**
+	 * Simple pattern that defines '.' or '/' to be a path saparator
+	 * in other nested-like functions.
+	 * @see #getNested(String)
+	 * @see #putNested(String, Object)
+	 * @see #removeNested(String)
+	 * @see #containsKeyNested(String)
+	 */
 	static final Pattern nestedSplitter = Pattern.compile("[\\./\\\\]");
 	
 	/**
