@@ -5,7 +5,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
-import java.net.URL;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -35,7 +35,6 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509TrustManager;
 
 import aeonics.data.Data;
-import aeonics.manager.Executor.Task;
 import aeonics.util.Callback;
 import aeonics.util.Internal;
 import aeonics.util.Tuples.Tuple;
@@ -130,7 +129,7 @@ public abstract class Network extends Manager.Type
 			
 			InputStream certData = null;
 			if( certificate.startsWith("storage://") )
-				certData = new URL(certificate).openConnection().getInputStream();
+				certData = URI.create(certificate).toURL().openConnection().getInputStream();
 			else
 				certData = new ByteArrayInputStream(certificate.getBytes(StandardCharsets.ISO_8859_1));
 			
@@ -152,7 +151,7 @@ public abstract class Network extends Manager.Type
 			{
 				InputStream chainData = null;
 				if( chain.startsWith("storage://") )
-					chainData = new URL(chain).openConnection().getInputStream();
+					chainData = URI.create(chain).toURL().openConnection().getInputStream();
 				else
 					chainData = new ByteArrayInputStream(chain.getBytes(StandardCharsets.ISO_8859_1));
 				
@@ -180,8 +179,8 @@ public abstract class Network extends Manager.Type
 			// =============
 			
 			String keyData = null;
-			if( certificate.startsWith("storage://") )
-				keyData = new String(new URL(certificate).openConnection().getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
+			if( key.startsWith("storage://") )
+				keyData = new String(URI.create(key).toURL().openConnection().getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
 			else
 				keyData = key;
 			
@@ -610,7 +609,7 @@ public abstract class Network extends Manager.Type
 		 * you should then call {@link Connection#next()} to fetch it.
 		 * @return the onReady callback
 		 */
-		public Callback<Connection> onReady();
+		public Callback<Void, Connection> onReady();
 		
 		/**
 		 * This is a non-blocking method to fetch the next batch of data that has been read from the network.
@@ -677,20 +676,19 @@ public abstract class Network extends Manager.Type
 		public default void write(Data data) throws IOException { write(ByteBuffer.wrap(data.toString().getBytes(StandardCharsets.ISO_8859_1))); }
 		
 		/**
-		 * Writes the specified data on the network as an I/O task.
-		 * Depending on the case, you may want to {@link Task#await()} for the write operation to complete.
-		 * Otherwise, this method returns directly.
+		 * Writes the specified data on the network.
+		 * This method is synchronous, so if you want an asynchronous behavior, you can wrap the call
+		 * in an {@link Executor} method.
 		 * @param data the data to write
-		 * @return the asynchronous task responsible to write on the network
-		 * @see Executor#io(Runnable)
+		 * @see Executor#io(aeonics.util.Functions.Runnable)
 		 */
-		public Task<Void> write(ByteBuffer data);
+		public void write(ByteBuffer data);
 		
 		/**
 		 * Gets the callback object that will be called once the connection is closed.
 		 * @return the onClose callback
 		 */
-		public Callback<Connection> onClose();
+		public Callback<Void, Connection> onClose();
 		
 		/**
 		 * Sets the timeout on this connection. If no network activity is detected in the specified interval, the connection shall be closed.
@@ -735,13 +733,13 @@ public abstract class Network extends Manager.Type
 		 * Gets the callback object that will be called with newly established connections
 		 * @return the onAccept callback
 		 */
-		public Callback<Connection> onAccept();
+		public Callback<Connection, Server> onAccept();
 		
 		/**
 		 * Gets the callback object that will be called once the connection is closed.
 		 * @return the onClose callback
 		 */
-		public Callback<Server> onClose();
+		public Callback<Void, Server> onClose();
 		
 		/**
 		 * Returns whether or not future accepted connections will be secure (typically using TLS or some other encryption mechanism)

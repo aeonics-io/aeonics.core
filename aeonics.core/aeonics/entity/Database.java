@@ -22,6 +22,7 @@ import aeonics.manager.Monitor;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Template;
+import aeonics.util.CheckCaller;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
 
@@ -459,8 +460,16 @@ public abstract class Database extends Item<Database.Type>
 		 */
 		private static class ResizableSemaphore extends Semaphore
 		{
-			public ResizableSemaphore(int size) { super(size); }
-			public void reduceBy(int value) { if( value > 0 ) super.reducePermits(value); }
+			private int size;
+			public ResizableSemaphore(int size) { super(size); this.size = size; }
+			public synchronized void reduceBy(int value)
+			{
+				if( value <= 0 ) return;
+				if( value >= size ) value = size - 1;
+				super.reducePermits(value);
+				this.size -= value;
+			}
+			public int size() { return size; }
 		}
 		
 		/**
@@ -485,18 +494,20 @@ public abstract class Database extends Item<Database.Type>
 		public int size() { return valueOf("size").asInt(); }
 		
 		/**
-		 * Sets the connection pool size
-		 * @param value the connection pool size
+		 * Update the connection pool size based on the current {@link #size()}
+		 * @hidden
 		 */
-		public void size(int value)
+		@Internal
+		public void refreshPoolSize()
 		{
-			int size = size();
-			if( value == size ) return;
-			if( value < 1 ) value = 1;
-			valueOf("size", Data.of(value));
+			int value = size();
+			int size = permits.size();
 			
-			if( value > size ) permits.release(value-size);
-			else
+			if( value == size ) // equal : do nothing
+				return;
+			else if( value > size ) // greater : increase limit
+				permits.release(value-size);
+			else // smaller : reduce and cleanup
 			{
 				permits.reduceBy(size-value);
 				
@@ -521,8 +532,6 @@ public abstract class Database extends Item<Database.Type>
 				// place, or because of race condition. Anyway, those would become dormant which 
 				// will not consume much
 			}
-			
-			valueOf("size", Data.of(value));
 		}
 		
 		/**
@@ -597,6 +606,8 @@ public abstract class Database extends Item<Database.Type>
 		@Internal
 		public void returnConnection(PooledConnection connection)
 		{
+			CheckCaller.require(PooledConnection.class, "close");
+			
 			if( active.remove(connection) )
 			{
 				idle.offer(connection);
@@ -611,13 +622,15 @@ public abstract class Database extends Item<Database.Type>
 		/**
 		 * Signals that a connection from this pool is dead and should be removed.
 		 * The connection will also be {@link PooledConnection#destroy()}.
-		 * This method should only be called from the {@link PooledConnection} when the underlying database link is broken.
+		 * This method should only be called from the {@link PooledConnection#query(String, Object...)} method when the underlying database link is broken.
 		 * @param connection the connection to remove
 		 * @hidden
 		 */
 		@Internal
 		public void deadConnection(PooledConnection connection)
 		{
+			CheckCaller.require(PooledConnection.class, "query");
+			
 			if( active.remove(connection) )
 				permits.release();
 			try { connection.destroy(); } catch(Exception e) { /* silent */ }
@@ -759,7 +772,12 @@ public abstract class Database extends Item<Database.Type>
 				.rule(Parameter.Rule.DIGIT)
 				.format(Parameter.Format.NUMBER)
 				.optional(true)
-				.defaultValue(Data.of(1)))
+				.defaultValue(1))
+			.onUpdate((data, instance) ->
+			{
+				if( data.containsKey("size") )
+					instance.refreshPoolSize();
+			})
 			;
 	}
 }

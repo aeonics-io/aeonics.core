@@ -24,22 +24,26 @@ public class Message implements Exportable
 	 * The message binding key
 	 */
 	private String key = "";
+	
 	/**
 	 * Returns the message binding key.
 	 * The key is never null, but it can be empty.
 	 * @return the message binding key
 	 */
 	public String key() { return key; }
+	
 	/**
 	 * Sets the message binding key
 	 * @param value the message binding key
+	 * @return this
 	 */
-	public void key(String value) { key = Objects.requireNonNullElse(value, ""); }
+	public Message key(String value) { key = Objects.requireNonNullElse(value, ""); return this; }
 	
 	/**
 	 * The id of the user related to this message
 	 */
 	private String user = null;
+	
 	/**
 	 * Returns the id of the user related to this message.
 	 * <p>The id may be null if this message does not relate to any user.</p>
@@ -47,16 +51,19 @@ public class Message implements Exportable
 	 * @return the id of the user related to this message
 	 */
 	public String user() { return user; }
+	
 	/**
 	 * Sets the id of the user related to this message
 	 * @param value the id of the user related to this message
+	 * @return this
 	 */
-	public void user(String value) { user = value; }
+	public Message user(String value) { user = value; return this; }
 	
 	/**
 	 * The message content
 	 */
 	private Data content = Data.map();
+	
 	/**
 	 * Returns the content of the message.
 	 * It may be any type of data, binary, key-value, list,...
@@ -64,16 +71,19 @@ public class Message implements Exportable
 	 * @return the content of the message
 	 */
 	public Data content() { return content; }
+	
 	/**
 	 * Sets the content of the message
 	 * @param value the content of the message
+	 * @return this
 	 */
-	public void content(Data value) { content = Objects.requireNonNullElseGet(value, Data::empty); }
+	public Message content(Data value) { content = Objects.requireNonNullElseGet(value, Data::empty); return this; }
 	
 	/**
 	 * The message metadata
 	 */
 	private Data metadata = Data.map();
+	
 	/**
 	 * Returns the metadata of the message in the form of key/value
 	 * @return the metadata of the message
@@ -84,17 +94,20 @@ public class Message implements Exportable
 	 * The linked connection
 	 */
 	private WeakReference<Network.Connection> connection = null;
+	
 	/**
 	 * Returns the linked connection, or null if there is none.
 	 * The linked connection is typically used to send a response to this message request.
 	 * @return the linked connection, or null if there is none
 	 */
 	public Network.Connection connection() { return connection == null ? null : connection.get(); }
+	
 	/**
 	 * Sets the linked connection
 	 * @param value the linked connection
+	 * @return this
 	 */
-	public void connection(Network.Connection value) { connection = new WeakReference<Network.Connection>(value); }
+	public Message connection(Network.Connection value) { connection = new WeakReference<Network.Connection>(value); return this; }
 	
 	/**
 	 * Creates a new message with the provided binding key

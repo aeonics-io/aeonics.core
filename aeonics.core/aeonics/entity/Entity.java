@@ -44,7 +44,7 @@ public class Entity implements Exportable, Snapshotable
 	 */
 	public Entity()
 	{
-		CheckCaller.require(Template.class, "build");
+		CheckCaller.require(Template.class, "create");
 	}
 	
 	/**
@@ -229,27 +229,41 @@ public class Entity implements Exportable, Snapshotable
 	}
 	
 	/**
-	 * Returns the value of the specified parameter.
+	 * Returns the value of the specified parameter without any contextual information.
 	 * @param parameter the parameter name
 	 * @return the parameter value or an empty data if the parameter value is not set or the parameter does not exist for this entity.
 	 */
 	public Data valueOf(String parameter)
 	{
+		return valueOf(parameter, null);
+	}
+	
+	/**
+	 * Returns the value of the specified parameter with the specified contextual information.
+	 * @param parameter the parameter name
+	 * @param context the context used for binding
+	 * @return the parameter value or an empty data if the parameter value is not set or the parameter does not exist for this entity.
+	 */
+	public Data valueOf(String parameter, Data context)
+	{
 		Tuple<Data, Parameter> t = parameters().get(parameter);
 		if( t == null ) return Data.empty();
 		if( !t.b.bindable() ) return t.a;
-		return t.b.resolve(t.a, null);
+		return t.b.resolve(t.a, context);
 	}
 	
 	/**
 	 * Sets the value of the specified parameter.
-	 * <p><b>Caution:</b> using this method manually will bypass the {@link Template#modify(Data, Entity)} and will ignore the potential modifier.</p>
+	 * <p><b>Caution:</b> using this method manually will bypass the {@link Template#update(Data, Entity)} and will ignore the potential modifier.</p>
 	 * @param parameter the parameter name
 	 * @param value the new value
+	 * @param <T> this entity type
+	 * @return this
 	 * @see Parameter#validate(Data)
 	 * @throws IllegalArgumentException if the provided value does not pass parameter validation
 	 */
-	public void valueOf(String parameter, Data value)
+	@SuppressWarnings("unchecked")
+	public <T extends Entity> T parameter(String parameter, Data value)
 	{
 		Tuple<Data, Parameter> t = parameters().get(parameter);
 		if( t == null )
@@ -261,6 +275,8 @@ public class Entity implements Exportable, Snapshotable
 			t.a = value;
 		else
 			throw new IllegalArgumentException("Parameter validation failed");
+		
+		return (T) this;
 	}
 	
 	/**
@@ -386,17 +402,6 @@ public class Entity implements Exportable, Snapshotable
 				throw new IllegalArgumentException("Invalid value for parameter " + p.name());
 		}
 		
-		for( Data e : r.a )
-		{
-			if( e.asString("id").equals(entity.id()) )
-			{
-				// overwrite the existing value
-				for( Map.Entry<String, Data> entry : parameters.entrySet() )
-					e.put(entry.getKey(), entry.getValue());
-				return this;
-			}
-		}
-		
 		r.a.add(parameters);
 		return this;
 	}
@@ -447,40 +452,40 @@ public class Entity implements Exportable, Snapshotable
 	/**
 	 * The onRemove event callback
 	 */
-	private Callback<Void> onRemove = new Callback<>();
+	private Callback<Void, Entity> onRemove = new Callback<>(this);
 	
 	/**
 	 * Event callback called when the entity is removed from the registry.
 	 * This is supposed to happen only once.
-	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * You should {@link Callback#then(aeonics.util.Functions.BiConsumer)} this event handler to subscribe to events.
 	 * @return the onRemove event handler
 	 */
-	public Callback<Void> onRemove() { return onRemove; }
+	public Callback<Void, Entity> onRemove() { return onRemove; }
 	
 	/**
 	 * The onUpdate event callback
 	 */
-	private Callback<Void> onUpdate = new Callback<>();
+	private Callback<Data, Entity> onUpdate = new Callback<>(this);
 	
 	/**
 	 * Event callback called when the entity has been updated by the template.
-	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * You should {@link Callback#then(aeonics.util.Functions.BiConsumer)} this event handler to subscribe to events.
 	 * @return the onUpdate event handler
 	 */
-	public Callback<Void> onUpdate() { return onUpdate; }
+	public Callback<Data, Entity> onUpdate() { return onUpdate; }
 	
 	/**
 	 * The onCreate event callback
 	 */
-	private Callback<Void> onCreate = new Callback<>();
+	private Callback<Data, Entity> onCreate = new Callback<>(this);
 	
 	/**
 	 * Event callback called when the entity has been created by the template.
 	 * This is supposed to happen only once.
-	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * You should {@link Callback#then(aeonics.util.Functions.BiConsumer)} this event handler to subscribe to events.
 	 * @return the onCreate event handler
 	 */
-	public Callback<Void> onCreate() { return onCreate; }
+	public Callback<Data, Entity> onCreate() { return onCreate; }
 	
 	/**
 	 * The default entity export implementation includes informational metadata fields

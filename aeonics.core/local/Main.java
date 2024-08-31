@@ -43,7 +43,7 @@ public class Main extends Plugin
 			Class.forName("aeonics.manager.Executor");
 			Class.forName("aeonics.manager.Lifecycle");
 		}
-		catch(Exception e) { e.printStackTrace(); }
+		catch(Exception e) { throw new RuntimeException(e); }
 	}
 	
 	public void start()

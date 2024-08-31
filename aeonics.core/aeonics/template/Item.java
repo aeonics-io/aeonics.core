@@ -80,9 +80,8 @@ public abstract class Item<T extends Entity>
 	public Template<? extends T> template()
 	{
 		Template<? extends T> t = new Template<T>(target(), type(), category())
-			.creator(creator())
-			.builder((data, instance) -> { Registry.add(instance); });
-		return Factory.add(t);
+			.creator(creator());
+		return t;
 	}
 	
 	/**

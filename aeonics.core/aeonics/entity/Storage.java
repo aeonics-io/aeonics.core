@@ -392,7 +392,7 @@ public abstract class Storage extends Item<Storage.Type>
 					.description("The root directory of this storage. All content will be stored as file or directory under this root path.")
 					.format(Parameter.Format.TEXT)
 					.optional(true)
-					.defaultValue(Data.of("")));
+					.defaultValue(""));
 		}
 	}
 	

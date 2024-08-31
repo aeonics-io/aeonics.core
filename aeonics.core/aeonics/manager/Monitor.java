@@ -1,11 +1,7 @@
 package aeonics.manager;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import aeonics.data.Data;
 import aeonics.entity.Entity;
-import aeonics.util.Functions.Supplier;
 import aeonics.util.StringUtils;
 
 /**
@@ -499,48 +495,4 @@ public abstract class Monitor extends Manager.Type
 	 * @return the counter and accumulated value of the specified metric
 	 */
 	public abstract Data report(String level1, String level2, String level3, String level4);
-	
-	/**
-	 * The list of probes
-	 */
-	private static Map<String, Probe> probes = new ConcurrentHashMap<>();
-	
-	/**
-	 * Registers or overwrites a probe
-	 * @see Monitor.Probe
-	 * @param name the name of the probe
-	 * @param probe the probe
-	 */
-	public static void addProbe(String name, Probe probe) { probes.put(name, probe); }
-	
-	/**
-	 * Unregisters a probe
-	 * @see Monitor.Probe
-	 * @param name the name of the probe
-	 */
-	public static void removeProbe(String name) { probes.remove(name); }
-	
-	/**
-	 * Provides an iterable over registered probes.
-	 * @see Monitor.Probe
-	 * @return iterable over registered probes
-	 */
-	public static Iterable<Map.Entry<String, Probe>> probes() { return probes.entrySet(); }
-	
-	/**
-	 * Fetches a specific probe.
-	 * @see Monitor.Probe
-	 * @param name the probe name
-	 * @return the probe, or null if not found
-	 */
-	public static Probe probe(String name) { return probes.get(name); }
-	
-	/**
-	 * A probe represents any type of information that can be fetched at any point in time.
-	 * Usually this is used for system metrics, counters or current state.
-	 * 
-	 * <p>There is no requrement in terms of data structure or allowed values.</p>
-	 * <p>The probe can be queried at any time and possibly concurrently, so you should ensure thread safety.</p>
-	 */
-	public static interface Probe extends Supplier<Data> { }
 }

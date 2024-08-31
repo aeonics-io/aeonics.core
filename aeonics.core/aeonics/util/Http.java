@@ -1,15 +1,10 @@
-/*
- * Copyright c Aeonics srl and/or its respectful owner. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER
- *
- * This material is subject to the Aeonics Commercial License agreement.
- */
 package aeonics.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -101,7 +96,7 @@ public class Http
 			if( body == null ) body = Data.empty();
 			
 			HttpURLConnection.setFollowRedirects(true);
-			URL u = new URL(url);
+			URL u = URI.create(url).toURL();
 			connection = (HttpURLConnection)u.openConnection();
 			connection.setRequestMethod(method);
 			connection.setDoOutput(true);
@@ -260,7 +255,7 @@ public class Http
 				query = new StringBuilder(queryString.asString());
 			
 			HttpURLConnection.setFollowRedirects(true);
-			URL u = new URL(url + (url.indexOf('?') > 0 ? "&" : "?") + query.toString());
+			URL u = URI.create(url + (url.indexOf('?') > 0 ? "&" : "?") + query.toString()).toURL();
 
 			connection = (HttpURLConnection)u.openConnection();
 			connection.setRequestMethod(method);

@@ -59,13 +59,13 @@ public abstract class Timeout extends Manager.Type
 		/**
 		 * The onExpire callback
 		 */
-		private Callback<T> onExpire = new Callback<>();
+		private Callback<T, Tracker<T>> onExpire = new Callback<>(this);
 		/**
 		 * Gets the callback object that will be called when the element has expired.
 		 * @see #delay()
 		 * @return the onExpire callback
 		 */
-		public Callback<T> onExpire() { return onExpire; }
+		public Callback<T, Tracker<T>> onExpire() { return onExpire; }
 	}
 	
 	/**

@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import aeonics.data.Data;
 import aeonics.manager.Executor;
 import aeonics.manager.Executor.Task;
 import aeonics.manager.Logger;
@@ -37,6 +36,8 @@ public class Queue extends Item<Queue.Type>
 	 * This is the default entity to manage the orchestration of the different messages.
 	 * While all steps are naturally queued by the {@link Executor}, this instance
 	 * adds another intermediate queuing level based on the level of concurrency.
+	 * 
+	 * Incoming messages are processed entirely before starting the next (depending on the concurrency).
 	 */
 	public static class Type extends Entity implements Consumer<Message>
 	{
@@ -44,10 +45,12 @@ public class Queue extends Item<Queue.Type>
 		 * Matches the parameter but already parsed for performance reasons
 		 */
 		private int concurrency = 0;
+		
 		/**
 		 * Matches the parameter but already parsed for performance reasons
 		 */
 		private int limit = 0;
+		
 		/**
 		 * Internal queue
 		 */
@@ -60,23 +63,17 @@ public class Queue extends Item<Queue.Type>
 			
 			try
 			{
-				while( limit > 0 && queue.size() >= limit )
+				if( limit > 0 && queue.size() >= limit )
 				{
-					synchronized(queue)
-					{
-						if( queue.size() < limit )
-							break;
-						queue.wait();
-					}
+					Discard.policy(message, "Queue size exceeded");
+					return;
 				}
 				queue.offer(message);
 				while( checkNext() ) ;
 			}
-			catch(Exception e)
+			catch(Throwable e)
 			{
-				Manager.of(Logger.class).warning(getClass(), e);
-				Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-				// TODO : discard ?
+				Discard.error(message, e);
 			}
 		}
 		
@@ -162,7 +159,8 @@ public class Queue extends Item<Queue.Type>
 				Tuple<Destination.Type, String> t = destinations.get(i);
 				tasks.add(next(i == 0 ? message : message.clone(), t.a, t.b));
 			}
-			return Task.all(tasks);
+			
+			return Manager.of(Executor.class).normal(tasks);
 		}
 		
 		/**
@@ -231,13 +229,12 @@ public class Queue extends Item<Queue.Type>
 						tasks.add(next(i == 0 ? m : m.clone(), t2.a, t2.b));
 					}
 				}
-				return Task.all(tasks);
+				
+				return Manager.of(Executor.class).normal(tasks);
 			})
 			.or((e) ->
 			{
-				Manager.of(Logger.class).fine(Action.class, e);
-				Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-				// TODO : discard ?
+				Discard.error(message, e);
 			});
 		}
 		
@@ -257,9 +254,7 @@ public class Queue extends Item<Queue.Type>
 			})
 			.or((e) ->
 			{
-				Manager.of(Logger.class).fine(Destination.class, e);
-				Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-				// TODO : discard ?
+				Discard.error(message, e);
 			});
 		} 
 		
@@ -283,11 +278,11 @@ public class Queue extends Item<Queue.Type>
 			.add(new Parameter("limit")
 				.summary("Maximum number of queued messages")
 				.description("This parameter defines the maximum number of messages that can be queued. If the limit is reached, "
-					+ "the queue will block the publisher until some spots are freed. To disable the limit, set it to a negative value. "
+					+ "additional messages will be rejected. To disable the limit, set it to a negative value. "
 					+ "If the limit is set to 0, then it means there will not be any queuing and the messages will be processed directly as they arrive.")
 				.rule(Parameter.Rule.INTEGER)
 				.format(Parameter.Format.NUMBER)
-				.defaultValue(Data.of(-1)))
+				.defaultValue(-1))
 			.add(new Parameter("concurrency")
 				.summary("Concurrency level")
 				.description("The concurrency level defines how many messages can be processed simultaneously. "
@@ -296,13 +291,13 @@ public class Queue extends Item<Queue.Type>
 					+ "all messages are sent for processing immediately. The default value is the number of processors on the machine.")
 				.rule(Parameter.Rule.DIGIT)
 				.format(Parameter.Format.NUMBER)
-				.defaultValue(Data.of(Runtime.getRuntime().availableProcessors())))
+				.defaultValue(Runtime.getRuntime().availableProcessors()))
 			.add(new Parameter("priority")
 				.summary("High priority")
 				.description("Whether or not this queue should execute in high priority mode.")
 				.rule(Parameter.Rule.BOOLEAN)
 				.format(Parameter.Format.BOOLEAN)
-				.defaultValue(Data.of(false)))
+				.defaultValue(false))
 			.add(new Relationship("actions")
 				.category(Action.class)
 				.summary("Linked Actions")
@@ -319,22 +314,15 @@ public class Queue extends Item<Queue.Type>
 					.summary("Input Channel")
 					.description("The name of the input channel to which this action is bound.")
 					.format(Parameter.Format.TEXT)))
-			.builder((data, instance) ->
+			.onCreate((data, instance) ->
 			{
-				if( instance instanceof Queue.Type)
-				{
-					((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
-					((Queue.Type)instance).limit = instance.valueOf("limit").asInt();
-				}
-				Registry.add(instance);
+				((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
+				((Queue.Type)instance).limit = instance.valueOf("limit").asInt();
 			})
-			.modifier((data, instance) ->
+			.onUpdate((data, instance) ->
 			{
-				if( instance instanceof Queue.Type)
-				{
-					((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
-					((Queue.Type)instance).limit = instance.valueOf("limit").asInt();
-				}
+				((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
+				((Queue.Type)instance).limit = instance.valueOf("limit").asInt();
 			});
 	}
 }

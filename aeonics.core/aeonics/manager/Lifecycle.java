@@ -120,7 +120,7 @@ public abstract class Lifecycle extends Manager.Type
 	/**
 	 * The before callbacks
 	 */
-	private static Map<Phase, Callback<Void>> before = new ConcurrentHashMap<>();
+	private static Map<Phase, Callback<Phase, Lifecycle>> before = new ConcurrentHashMap<>();
 	
 	/**
 	 * Registers a handler to run before other handlers in the specified phase.
@@ -128,9 +128,9 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public static void before(Phase phase, Once<Void> handler) 
+	public static void before(Phase phase, Once<Phase, Lifecycle> handler) 
 	{
-		synchronized(phase) { before.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
+		synchronized(phase) { before.computeIfAbsent(phase, (p) -> new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))).then(handler); }
 	}
 	
 	/**
@@ -138,12 +138,12 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the phase
 	 * @return the matching callback
 	 */
-	protected static Callback<Void> before(Phase phase) { return before.getOrDefault(phase, new Callback<Void>()); }
+	protected static Callback<Phase, Lifecycle> before(Phase phase) { return before.getOrDefault(phase, new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))); }
 
 	/**
 	 * The on callbacks
 	 */
-	private static Map<Phase, Callback<Void>> on = new ConcurrentHashMap<>();
+	private static Map<Phase, Callback<Phase, Lifecycle>> on = new ConcurrentHashMap<>();
 	
 	/**
 	 * Registers a handler to run in the specified phase.
@@ -151,9 +151,9 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public static void on(Phase phase, Once<Void> handler) 
+	public static void on(Phase phase, Once<Phase, Lifecycle> handler) 
 	{
-		synchronized(phase) { on.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
+		synchronized(phase) { on.computeIfAbsent(phase, (p) -> new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))).then(handler); }
 	}
 	
 	/**
@@ -161,12 +161,12 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the phase
 	 * @return the matching callback
 	 */
-	protected static Callback<Void> on(Phase phase) { return on.getOrDefault(phase, new Callback<Void>()); }
+	protected static Callback<Phase, Lifecycle> on(Phase phase) { return on.getOrDefault(phase, new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))); }
 
 	/**
 	 * The after callbacks
 	 */
-	private static Map<Phase, Callback<Void>> after = new ConcurrentHashMap<>();
+	private static Map<Phase, Callback<Phase, Lifecycle>> after = new ConcurrentHashMap<>();
 	
 	/**
 	 * Registers a handler to run after other handlers in the specified phase.
@@ -174,9 +174,9 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public static void after(Phase phase, Once<Void> handler)
+	public static void after(Phase phase, Once<Phase, Lifecycle> handler)
 	{
-		synchronized(phase) { after.computeIfAbsent(phase, (p) -> new Callback<Void>()).then(handler); }
+		synchronized(phase) { after.computeIfAbsent(phase, (p) -> new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))).then(handler); }
 	}
 	
 	/**
@@ -184,7 +184,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the phase
 	 * @return the matching callback
 	 */
-	protected static Callback<Void> after(Phase phase) { return after.getOrDefault(phase, new Callback<Void>()); }
+	protected static Callback<Phase, Lifecycle> after(Phase phase) { return after.getOrDefault(phase, new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))); }
 	
 	/**
 	 * Default initial lifecycle template and entity implementation
@@ -217,5 +217,5 @@ public abstract class Lifecycle extends Manager.Type
 	 * @hidden
 	 */
 	@Internal
-	public static final Lifecycle NOOP = Manager.set(Lifecycle.class, Factory.add(new NoopLifecycle()).build().name("Noop Lifecycle"));
+	public static final Lifecycle NOOP = Manager.set(Lifecycle.class, Factory.add(new NoopLifecycle()).create().name("Noop Lifecycle"));
 }

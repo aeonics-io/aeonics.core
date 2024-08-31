@@ -107,7 +107,15 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 		Template<U> template = Factory.of(data.asString("__category")).get(data.asString("__type"));
 		if( template == null )
 			throw new RuntimeException("No template found for " + data.asString("__category") + " > " + data.asString("__type"));
-		return template.build(data);
+		return template.create(data);
+	}
+	
+	public static <U extends Entity> U modify(U instance, Data data)
+	{
+		Template<U> template = Factory.of(instance.category()).get(instance.type());
+		if( template == null )
+			throw new RuntimeException("No template found for " + instance.category() + " > " + instance.type());
+		return template.update(data, instance);
 	}
 	
 	/**
@@ -223,6 +231,12 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	 * Removes all templates from this factory.
 	 */
 	public void clear() { templates.clear(); }
+	
+	/**
+	 * Returns the number of templates in this factory.
+	 * @return the number of templates in this factory
+	 */
+	public int size() { return templates.size(); }
 	
 	/**
 	 * Returns an iterator over all templates registered in this factory

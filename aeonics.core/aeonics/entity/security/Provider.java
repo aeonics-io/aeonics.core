@@ -155,15 +155,11 @@ public abstract class Provider extends Item<Provider.Type>
 				.rule(Parameter.Rule.BOOLEAN)
 				.format(Parameter.Format.BOOLEAN)
 				.optional(true)
-				.defaultValue(Data.of(true)))
-			.builder((data, instance) -> 
+				.defaultValue(true))
+			.onCreate((data, instance) -> 
 			{
-				if( instance instanceof Provider.Type )
-				{
-					if( data.containsKey("__key") ) ((Provider.Type)instance).key = data.asString("__key");
-					else ((Provider.Type)instance).key = Manager.of(Security.class).randomHash();
-				}
-				Registry.add(instance);
+				if( data.containsKey("__key") ) ((Provider.Type)instance).key = data.asString("__key");
+				else ((Provider.Type)instance).key = Manager.of(Security.class).randomHash();
 			});
 	}
 	
@@ -253,7 +249,7 @@ public abstract class Provider extends Item<Provider.Type>
 				
 				// create user if needed
 				if( existing == null )
-					existing = Factory.of(User.class).get(User.class).build().name(context.asString("username"));
+					existing = Factory.of(User.class).get(User.class).create().name(context.asString("username"));
 
 				// already joined
 				if( !privateData(existing).isEmpty() ) return existing;
@@ -308,7 +304,7 @@ public abstract class Provider extends Item<Provider.Type>
 				.add(new Parameter("complexity")
 					.summary("Password policy complexity")
 					.description("Enforce the password complexity to be above the specified threshold of possible combinations.")
-					.defaultValue(Data.of(10_000_000_000_000_000L))
+					.defaultValue(10_000_000_000_000_000L)
 					.format(Parameter.Format.NUMBER)
 					.rule(Parameter.Rule.DIGIT)
 					)

@@ -184,7 +184,7 @@ public class Parameter implements Documented
 	 * @param value the default value
 	 * @return this
 	 */
-	public <P extends Parameter> P defaultValue(Data value) { defaultValue = value; return (P)this; }
+	public <P extends Parameter> P defaultValue(Object value) { defaultValue = Data.of(value); return (P)this; }
 	
 	/**
 	 * The binding pattern
@@ -217,15 +217,15 @@ public class Parameter implements Documented
 			switch(matcher.group(1))
 			{
 				case "config":
-					try { matcher.appendReplacement(sb, Objects.requireNonNullElse(Manager.of(Config.class).get(name).asString(), "")); }
+					try { matcher.appendReplacement(sb, Matcher.quoteReplacement(Objects.requireNonNullElse(Manager.of(Config.class).get(name).asString(), ""))); }
 					catch(Exception e) { matcher.appendReplacement(sb, ""); }
 					break;
 				case "context":
-					try { matcher.appendReplacement(sb, context != null ? context.getNested(name).asString() : ""); }
+					try { matcher.appendReplacement(sb, context != null ? Matcher.quoteReplacement(context.getNested(name).asString()) : ""); }
 					catch(Exception e) { matcher.appendReplacement(sb, ""); }
 					break;
 				case "secret":
-					try { matcher.appendReplacement(sb, Objects.requireNonNullElse(Manager.of(Vault.class).get(name).toString(), "")); }
+					try { matcher.appendReplacement(sb, Matcher.quoteReplacement(Objects.requireNonNullElse(Manager.of(Vault.class).get(name).toString(), ""))); }
 					catch(Exception e) { matcher.appendReplacement(sb, ""); }
 					break;
 				case "translate":
@@ -237,7 +237,7 @@ public class Parameter implements Documented
 						int i = 0;
 						if( parts.length > 1 && parts[0].length() == 2 ) { language = parts[0]; i = 1; }
 						String text = StringUtils.substitute(Manager.of(Translator.class).get(parts[i], language), "{}", Arrays.copyOfRange(parts, i, parts.length));
-						matcher.appendReplacement(sb, text);
+						matcher.appendReplacement(sb, Matcher.quoteReplacement(text));
 					}
 					catch(Exception e) { matcher.appendReplacement(sb, ""); }
 					break;

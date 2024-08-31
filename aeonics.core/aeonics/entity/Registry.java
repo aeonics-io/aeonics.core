@@ -85,26 +85,26 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	/**
 	 * The onAdd event callback
 	 */
-	private Callback<Entity> onAdd = new Callback<>();
+	private Callback<Entity, Registry<T>> onAdd = new Callback<>(this);
 	
 	/**
 	 * Event callback called every time an entity is added to this registry.
-	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * You should {@link Callback#then(aeonics.util.Functions.BiConsumer)} this event handler to subscribe to events.
 	 * @return the onAdd event handler
 	 */
-	public Callback<Entity> onAdd() { return onAdd; }
+	public Callback<Entity, Registry<T>> onAdd() { return onAdd; }
 	
 	/**
 	 * The onRemove event callback
 	 */
-	private Callback<Entity> onRemove = new Callback<>();
+	private Callback<Entity, Registry<T>> onRemove = new Callback<>(this);
 	
 	/**
 	 * Event callback called every time an entity is removed from this registry.
-	 * You should {@link Callback#then(aeonics.util.Functions.Consumer)} this event handler to subscribe to events.
+	 * You should {@link Callback#then(aeonics.util.Functions.BiConsumer)} this event handler to subscribe to events.
 	 * @return the onRemove event handler
 	 */
-	public Callback<Entity> onRemove() { return onRemove; }
+	public Callback<Entity, Registry<T>> onRemove() { return onRemove; }
 	
 	/**
 	 * private constructor

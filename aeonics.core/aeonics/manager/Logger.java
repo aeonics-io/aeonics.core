@@ -643,29 +643,7 @@ public abstract class Logger extends Manager.Type
 		
 		if( params != null && params.length > 0 )
 		{
-			int start = 0;
-			for( int p = 0; p < params.length; p++ )
-			{
-				int end = message.indexOf("{}", start);
-				if( end >= 0 )
-				{
-					b.append(Json.escape(message.substring(start, end)));
-					start = end+2;
-					
-					if( params[p] == null )
-						b.append("null");
-					else if( params[p] instanceof Throwable )
-					{
-						b.append(Json.escape(printStackTrace((Throwable)params[p])));
-					}
-					else
-						b.append(Json.escape(params[p].toString()));
-				}
-				else
-					break;
-			}
-			if( start < message.length() )
-				b.append(Json.escape(message.substring(start)));
+			b.append(Json.escape(bindMessage(message, params)));
 		}
 		else
 		{
@@ -673,6 +651,44 @@ public abstract class Logger extends Manager.Type
 		}
 		
 		b.append("\"}");
+		
+		return b.toString();
+	}
+	
+	/**
+	 * Substitutes <code>{}</code> in the message by the string representation
+	 * of the parameters provided.
+	 * @param message the input message
+	 * @param params the substitution parameters
+	 * @return the formatted message
+	 */
+	protected String bindMessage(String message, final Object ...params)
+	{
+		StringBuilder b = new StringBuilder();
+		
+		int start = 0;
+		for( int p = 0; p < params.length; p++ )
+		{
+			int end = message.indexOf("{}", start);
+			if( end >= 0 )
+			{
+				b.append(message.substring(start, end));
+				start = end+2;
+				
+				if( params[p] == null )
+					b.append("null");
+				else if( params[p] instanceof Throwable )
+				{
+					b.append(printStackTrace((Throwable)params[p]));
+				}
+				else
+					b.append(params[p].toString());
+			}
+			else
+				break;
+		}
+		if( start < message.length() )
+			b.append(message.substring(start));
 		
 		return b.toString();
 	}
@@ -695,6 +711,8 @@ public abstract class Logger extends Manager.Type
 			{
 				if( level() > ALL && ((e.getModuleName() != null && e.getModuleName().startsWith("java.")) 
 						|| e.getClassName().startsWith("java.") 
+						|| e.getClassName().startsWith("javax.") 
+						|| e.getClassName().startsWith("jdk.") 
 						|| e.getClassName().startsWith("sun.") 
 						|| e.getClassName().startsWith("aeonics.")) )
 					continue;
@@ -736,7 +754,11 @@ public abstract class Logger extends Manager.Type
 			protected void handle(int level, String type, String message, Object... params) 
 			{
 				if( level < level() || message == null || message.isBlank() ) return;
-				System.out.println(toJson(level, type, message, params));
+				String text = toJson(level, type, message, params);
+				synchronized(System.out)
+				{
+					System.out.println(text);
+				}
 			}
 		}
 
@@ -759,5 +781,5 @@ public abstract class Logger extends Manager.Type
 	 * @hidden
 	 */
 	@Internal
-	public static final Logger CONSOLE = Manager.set(Logger.class, Factory.add(new ConsoleLogger()).build().name("Console Logger"));
+	public static final Logger CONSOLE = Manager.set(Logger.class, Factory.add(new ConsoleLogger()).create().name("Console Logger"));
 }

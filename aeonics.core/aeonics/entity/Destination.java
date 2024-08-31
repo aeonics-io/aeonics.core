@@ -3,13 +3,12 @@ package aeonics.entity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
 import aeonics.template.Channel;
-import aeonics.template.Factory;
 import aeonics.template.Item;
+import aeonics.util.Functions.BiConsumer;
 import aeonics.util.StringUtils;
 
 /**
@@ -57,7 +56,7 @@ import aeonics.util.StringUtils;
  *     .build(); // &lt;-- create an instance of the entity and register it in the registry
  * </pre>
  */
-public abstract class Destination extends Item<Destination.Type>
+public class Destination extends Item<Destination.Type>
 {
 	/**
 	 * Superclass template for destinations
@@ -131,8 +130,9 @@ public abstract class Destination extends Item<Destination.Type>
 		 * 
 		 * @param message the input message
 		 * @param input the input channel name
+		 * @throws Exception in case of error
 		 */
-		public void accept(Message message, String input)
+		public void accept(Message message, String input) throws Exception
 		{
 			if( process != null )
 				process.accept(message, input);
@@ -153,8 +153,9 @@ public abstract class Destination extends Item<Destination.Type>
 	public Destination.Template template()
 	{
 		Destination.Template t = new Destination.Template(target(), this.getClass())
-			.creator(creator())
-			.builder((data, instance) -> { Registry.add(instance); });
-		return (Destination.Template) Factory.add(t);
+			.summary("Destination")
+			.description("Terminal step of a data flow, this entity accepts messages for processing.")
+			.creator(creator());
+		return t;
 	}
 }

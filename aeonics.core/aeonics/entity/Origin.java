@@ -1,21 +1,24 @@
 package aeonics.entity;
 
 import java.io.Closeable;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import aeonics.util.Functions.Consumer;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
 import aeonics.manager.Executor;
+import aeonics.manager.Lifecycle;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.manager.Monitor;
 import aeonics.manager.Network;
 import aeonics.manager.Scheduler;
+import aeonics.manager.Scheduler.Cron;
 import aeonics.manager.Executor.Task;
 import aeonics.template.Channel;
-import aeonics.template.Factory;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Relationship;
@@ -147,6 +150,12 @@ public abstract class Origin extends Item<Origin.Type>
 			if( message == null ) return;
 			Objects.requireNonNull(channel, "The output channel name is invalid.");
 			
+			if( !started() )
+			{
+				Discard.ignore(message, "Origin " + id() + " not started");
+				return;
+			}
+			
 			Manager.of(Monitor.class).count(this);
 			
 			boolean shouldClone = false;
@@ -160,15 +169,12 @@ public abstract class Origin extends Item<Origin.Type>
 						try { t.publish(shouldClone ? message.clone() : message); shouldClone = true; }
 						catch(Exception e)
 						{
-							Manager.of(Logger.class).severe(Topic.class, e);
-							Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-							// TODO : discard ?
+							Discard.error(message, e);
 						}
 					}
 					else
 					{
-						Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-						// TODO : discard ?
+						Discard.ignore(message, "Unknown topic " + relation.b);
 					}
 				}
 			}
@@ -241,7 +247,6 @@ public abstract class Origin extends Item<Origin.Type>
 		public void start()
 		{
 			if( start != null ) start.run();
-			else throw new IllegalStateException("Start function is not set");
 		}
 		
 		/**
@@ -265,8 +270,7 @@ public abstract class Origin extends Item<Origin.Type>
 		 */
 		public void stop()
 		{
-			if( stop != null ) stop();
-			else throw new IllegalStateException("Stop function is not set");
+			if( stop != null ) stop.run();
 		}
 		
 		/**
@@ -298,9 +302,167 @@ public abstract class Origin extends Item<Origin.Type>
 	public Origin.Template template()
 	{
 		Origin.Template t = new Origin.Template(target(), this.getClass())
-			.creator(creator())
-			.builder((data, instance) -> { Registry.add(instance); });
-		return (Origin.Template) Factory.add(t);
+			.creator(creator());
+		return t;
+	}
+	
+	// =========================================
+	//
+	// BASIC ORIGIN
+	//
+	// =========================================
+	
+	/**
+	 * This class represents a basic data Origin that has no predefined behavior.
+	 * <p>As is, the only way to emit data is to call the {@link Origin.Type#emit(Message, String)} method manually.</p>
+	 */
+	public static class Basic extends Origin
+	{
+		public static class Type extends Origin.Type
+		{
+			@Override
+			public void start() { started(true); }
+			
+			@Override
+			public void stop() { stopped(true); }
+		}
+		
+		protected Class<? extends Scheduled.Type> defaultTarget() { return Scheduled.Type.class; }
+		protected Supplier<? extends Scheduled.Type> defaultCreator() { return Scheduled.Type::new; }
+		
+		@Override
+		public Origin.Template template()
+		{
+			return super.template()
+				.summary("Scheduled origin")
+				.description("This data origin is triggered automatically at regular interval.")
+				.add(new Parameter("rule")
+					.summary("Recurring rule")
+					.description("The recurrence is defined by a RFC-5545 RRULE and DTSART string.")
+					.format(Parameter.Format.TEXT))
+				.onCreate((data, instance) -> 
+				{
+					((Origin.Scheduled.Type)instance).cron = new Cron() { }
+						.template()
+						.create()
+						.task((time) -> { ((Origin.Scheduled.Type)instance).runTask(time); })
+						.start(ZonedDateTime.now())
+						.rule(data.asString("rule"));
+						
+					if( Manager.of(Lifecycle.class).phase() == Lifecycle.Phase.RUN )
+						((Origin.Scheduled.Type)instance).start();
+				})
+				.onUpdate((data, instance) -> 
+				{
+					if( data.containsKey("rule") )
+					{
+						((Origin.Scheduled.Type)instance).cron.rule(data.asString("rule"));
+						Manager.of(Scheduler.class).refresh();
+					}
+				});
+		}
+	}
+	
+	
+	// =========================================
+	//
+	// SCHEDULED ORIGIN
+	//
+	// =========================================
+	
+	/**
+	 * This class represents a data Origin that is activated at regular interval.
+	 * <p>You should provide the {@link Scheduled.Type#task(Consumer)} and set a recurrence rule.</p>
+	 */
+	public static class Scheduled extends Origin
+	{
+		public static class Type extends Origin.Type
+		{
+			private Consumer<ZonedDateTime> task = null;
+			private Scheduler.Cron.Type cron = null;
+			
+			private void runTask(ZonedDateTime value)
+			{
+				if( task != null )
+				{
+					try
+					{
+						task.accept(value);
+					}
+					catch(Exception e)
+					{
+						Manager.of(Logger.class).warning(Scheduled.class, e);
+					}
+				}
+			}
+			
+			/**
+			 * Sets the task that shall run at the specified interval
+			 * @param value the current time
+			 * @return this
+			 */
+			public Type task(Consumer<ZonedDateTime> value)
+			{
+				this.task = value;
+				return this;
+			}
+			
+			@Override
+			public void start()
+			{
+				if( cron != null )
+				{
+					Registry.add(cron);
+					Manager.of(Scheduler.class).refresh();
+					started(true);
+				}
+			}
+			
+			@Override
+			public void stop()
+			{
+				if( cron != null )
+				{
+					Registry.of(Scheduler.Cron.class).remove(cron.id());
+					stopped(true);
+				}
+			}
+		}
+		
+		protected Class<? extends Scheduled.Type> defaultTarget() { return Scheduled.Type.class; }
+		protected Supplier<? extends Scheduled.Type> defaultCreator() { return Scheduled.Type::new; }
+		
+		@Override
+		public Origin.Template template()
+		{
+			return super.template()
+				.summary("Scheduled origin")
+				.description("This data origin is triggered automatically at regular interval.")
+				.add(new Parameter("rule")
+					.summary("Recurring rule")
+					.description("The recurrence is defined by a RFC-5545 RRULE and DTSART string.")
+					.format(Parameter.Format.TEXT))
+				.onCreate((data, instance) -> 
+				{
+					((Origin.Scheduled.Type)instance).cron = new Cron() { }
+						.template()
+						.create()
+						.task((time) -> { ((Origin.Scheduled.Type)instance).runTask(time); })
+						.start(ZonedDateTime.now())
+						.rule(data.asString("rule"));
+						
+					if( Manager.of(Lifecycle.class).phase() == Lifecycle.Phase.RUN )
+						((Origin.Scheduled.Type)instance).start();
+				})
+				.onUpdate((data, instance) -> 
+				{
+					if( data.containsKey("rule") )
+					{
+						((Origin.Scheduled.Type)instance).cron.rule(data.asString("rule"));
+						Manager.of(Scheduler.class).refresh();
+					}
+				});
+		}
 	}
 	
 	// =========================================
@@ -450,7 +612,7 @@ public abstract class Origin extends Item<Origin.Type>
 				try
 				{
 					server = connect();
-					server.onClose().then((s) ->
+					server.onClose().then((x, s) ->
 					{
 						if( !stopping() && !stopped() )
 						{
@@ -557,7 +719,7 @@ public abstract class Origin extends Item<Origin.Type>
 				try
 				{
 					connection = connect();
-					connection.onClose().then((s) ->
+					connection.onClose().then((x, s) ->
 					{
 						if( !stopping() && !stopped() )
 						{

@@ -15,7 +15,7 @@ import aeonics.template.Template;
  * 
  * <p>Undernormal circumstances, the shapshot and restore behavior should be orchestrated by the {@link Snapshot} manager.
  * The restore mechanism shall reuse the {@link Factory#build(Data)} method. This means that the shapshot data must
- * comply with the {@link Template#build(Data)} entity creation mechanism.</p>
+ * comply with the {@link Template#create(Data)} entity creation mechanism.</p>
  * 
  * <p>You <b>may</b> include private data in the snapshot form as it is not intended to be visible by the user.
  * The privacy and security of the snapshot data depends on the implementation of the snapshot manager.</p>

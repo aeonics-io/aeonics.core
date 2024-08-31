@@ -4,7 +4,6 @@ import java.util.function.Supplier;
 
 import aeonics.data.Data;
 import aeonics.entity.security.User;
-import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.manager.Monitor;
 import aeonics.manager.Security;
@@ -39,6 +38,9 @@ public class Topic extends Item<Topic.Type>
 			
 			Manager.of(Monitor.class).count(this);
 
+			// mark this message as it passed through this topic
+			message.metadata().put("topic", id());
+			
 			String key = message.key();
 			boolean shouldClone = false;
 			for( Tuple<Entity, Data> relation : this.relations("queues") )
@@ -48,19 +50,17 @@ public class Topic extends Item<Topic.Type>
 					Queue.Type q = relation.a.cast();
 					if( q != null )
 					{
-						try { q.accept(shouldClone ? message.clone() : message); shouldClone = true; }
-						catch(Exception e)
+						try
+						{ q.accept(shouldClone ? message.clone() : message); shouldClone = true; }
+						catch(Throwable e)
 						{
-							Manager.of(Logger.class).severe(Queue.class, e);
-							Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-							// TODO : discard ?
+							Discard.error(message, e);
 						}
 					}
 				}
 				else
 				{
-					Manager.of(Logger.class).severe("DISCARD", "MESSAGE DISCARDED");
-					// TODO : discard ?
+					Discard.ignore(message, "No matching queue process the message");
 				}
 			}
 		}
@@ -91,6 +91,6 @@ public class Topic extends Item<Topic.Type>
 					.description("The subscription key allows to filter the messages that the queue will receive.")
 					.format(Parameter.Format.TEXT)
 					.optional(true)
-					.defaultValue(Data.of("#"))));
+					.defaultValue("#")));
 	}
 }

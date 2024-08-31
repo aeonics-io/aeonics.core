@@ -270,15 +270,14 @@ public abstract class Scheduler extends Manager.Type
 		}
 		rrule = "RRULE:FREQ=" + freq + ";INTERVAL=" + interval;
 		
-		Scheduler.Cron.Type c = Registry.add(new Scheduler.Cron() {}
+		Scheduler.Cron.Type c = new Scheduler.Cron() {}
 			.template()
 			.summary("Runs a task at regular interval")
 			.description("This task runs every " + step + " " + unit.toString() + " starting from " + (from == null ? ZonedDateTime.now() : from))
-			.build()
+			.create()
 			.task(task)
 			.start(from == null ? ZonedDateTime.now() : from)
-			.rule(rrule)
-		);
+			.rule(rrule);
 		
 		refresh();
 		return c;
@@ -382,20 +381,6 @@ public abstract class Scheduler extends Manager.Type
 			if( definition.containsKey("BYSETPOS") ) throw new UnsupportedOperationException("BYSETPOS is not supported");
 			if( definition.containsKey("BYWEEKNO") ) throw new UnsupportedOperationException("BYWEEKNO is not supported");
 			if( definition.containsKey("BYYEARDAY") ) throw new UnsupportedOperationException("BYYEARDAY is not supported");
-			
-			// no interval > time unit is allowed
-			int limit = 1;
-			switch(freq)
-			{
-				case SECONDLY:
-				case MINUTELY: limit = 59; break;
-				case HOURLY: limit = 23; break;
-				case DAILY: limit = 30; break;
-				case WEEKLY: limit = 51; break; // every 52 week
-				case MONTHLY: limit = 11; break;
-				case YEARLY: limit = Integer.MAX_VALUE; break;
-			}
-			if( interval > limit ) throw new UnsupportedOperationException("INTERVAL must not exceed the FREQ time unit");
 		}
 		
 		private Freq freq = null;

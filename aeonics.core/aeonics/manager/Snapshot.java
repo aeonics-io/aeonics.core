@@ -22,7 +22,7 @@ public abstract class Snapshot extends Manager.Type
 	/**
 	 * The snapshot create callback
 	 */
-	protected static Callback<Data> createCallback = new Callback<Data>();
+	protected static Callback<Data, Snapshot> createCallback = new Callback<>(() -> Manager.of(Snapshot.class));
 	
 	/**
 	 * Adds an event handler to react to the current snapshot phase.
@@ -30,12 +30,12 @@ public abstract class Snapshot extends Manager.Type
 	 * For isolation purposes, a new empty data object will be provided per plugin (java module scope).
 	 * @param handler the snapshot handler
 	 */
-	public static void onSnapshot(Consumer<Data> handler) { createCallback.then(handler); }
+	public static void onSnapshot(Consumer<Data> handler) { createCallback.then((data, self) -> handler.accept(data)); }
 	
 	/**
 	 * The snapshot restore callback
 	 */
-	protected static Callback<Data> restoreCallback = new Callback<Data>();
+	protected static Callback<Data, Snapshot> restoreCallback = new Callback<>(() -> Manager.of(Snapshot.class));
 	
 	/**
 	 * Adds an event handler to react to the current restore phase.
@@ -43,7 +43,7 @@ public abstract class Snapshot extends Manager.Type
 	 * For isolation purposes, each plugin (java module scope) will be given its own data object.
 	 * @param handler the restore handler
 	 */
-	public static void onRestore(Consumer<Data> handler) { restoreCallback.then(handler); }
+	public static void onRestore(Consumer<Data> handler) { restoreCallback.then((data, self) -> handler.accept(data)); }
 	
 	/**
 	 * Creates a new snapshot using the specified suffix while the prefix is usually the date of the snapshot.

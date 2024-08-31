@@ -8,10 +8,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
-import aeonics.manager.Logger;
-import aeonics.manager.Manager;
 import aeonics.template.Channel;
-import aeonics.template.Factory;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Relationship;
@@ -181,21 +178,14 @@ public abstract class Action extends Item<Action.Type>
 		 * @param outputs the list of meaningful output channels
 		 * @return a map with all output channels bound to a message. Any channel may be included in the response, with or without messgage (null).
 		 * Although, for sobriety, it is best if only requested output channels that did produce a message be included in the result.
+		 * @throws Exception in case of error
 		 */
-		public Map<String, Message> accept(Message message, String input, Set<String> outputs)
+		public Map<String, Message> accept(Message message, String input, Set<String> outputs) throws Exception
 		{
 			if( processor != null )
-			{
-				try { return processor.apply(message, input, outputs); }
-				catch(Exception e)
-				{
-					Manager.of(Logger.class).warning(getClass(), e);
-					Manager.of(Logger.class).severe("DISCARD", "MESSAGE ERROR");
-					// TODO : discard ?
-					return null;
-				}
-			}
-			else return null;
+				return processor.apply(message, input, outputs);
+			else
+				return null;
 		}
 		
 		/**
@@ -226,8 +216,7 @@ public abstract class Action extends Item<Action.Type>
 	public Action.Template template()
 	{
 		Action.Template t = new Action.Template(target(), this.getClass())
-			.creator(creator())
-			.builder((data, instance) -> { Registry.add(instance); });
-		return (Action.Template) Factory.add(t);
+			.creator(creator());
+		return t;
 	}
 }

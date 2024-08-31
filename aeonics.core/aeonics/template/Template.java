@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
@@ -14,8 +13,9 @@ import aeonics.entity.Registry;
 import aeonics.manager.Config;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
+import aeonics.util.Callback;
 import aeonics.util.Documented;
-import aeonics.util.Internal;
+import aeonics.util.Functions.BiConsumer;
 import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
 
@@ -31,6 +31,19 @@ import aeonics.util.Tuples.Tuple;
 public class Template<T extends Entity> implements Documented
 {
 	/**
+	 * Performs an unsafe cast to the specified subtype.
+	 * <p>This method is useful when using the chained method flow with templates:</p>
+	 * <pre>
+	 * new Item().template() // &lt;-- returns a generic Template
+	 *     .&lt;SubTemplate&gt;cast() // &lt;-- unsafe cast
+	 *     .foo();
+	 * </pre>
+	 * @param <X> the return type
+	 * @return this
+	 */
+	public <X extends Template<?>> X cast() { return (X) this; }
+	
+	/**
 	 * The custom instance creator
 	 */
 	private Supplier<? extends T> creator = null;
@@ -45,7 +58,8 @@ public class Template<T extends Entity> implements Documented
 	 * Sets the custom instance creator that provides new instance of the target entity.
 	 * The returned objects must be instances of the {@link #target()} entity type.
 	 * <p>This method should not attempt to initialize the instance, if specific initialization is required, you
-	 * should provide a {@link #builder(BiConsumer)} and a {@link #modifier(BiConsumer)}.</p>
+	 * should provide a {@link #onCreate(BiConsumer)} and a {@link #onUpdate(BiConsumer)} to account for parameters
+	 * provided by the user.</p>
 	 * @param <U> the template type
 	 * @param creator the custom initializer
 	 * @return this
@@ -247,6 +261,7 @@ public class Template<T extends Entity> implements Documented
 		this.target = Objects.requireNonNull(target);
 		this.type = type;
 		this.category = StringUtils.toLowerCase(category);
+		Factory.add(this);
 	}
 	
 	/**
@@ -314,27 +329,30 @@ public class Template<T extends Entity> implements Documented
 	public <U extends Template<T>> U enforceParameterValidation(boolean value) { enforceParameterValidation = value; return (U) this; }
 	
 	/**
-	 * The optional custom initializer
+	 * A temporary variable used to feed the onCreate and onUpdate callback target
 	 */
-	private BiConsumer<Data, T> builder = null;
+	private ThreadLocal<T> current = new ThreadLocal<>();
 	
 	/**
-	 * Sets an optional custom initializer that will be given the newly created entity instance and the user input. 
+	 * The callback for newly created entities
+	 */
+	private Callback<Data, T> onCreate = new Callback<>(() -> current.get());
+	
+	/**
+	 * Sets a generic callback handler that will be called for every instance created by this template. 
 	 * @param <U> the template type
-	 * @param builder the custom initializer
+	 * @param handler the generic handler
 	 * @return this
 	 */
-	public <U extends Template<T>> U builder(BiConsumer<Data, T> builder) { this.builder = builder; return (U) this; }
+	public <U extends Template<T>> U onCreate(BiConsumer<Data, T> handler) { this.onCreate.then(handler); return (U) this; }
 	
 	/**
 	 * Creates a new entity instance and sets the basic properties and relationships.
 	 * If a custom builder is set, it is then called.
 	 * @return an instance of the target entity
 	 * @throws RuntimeException if an error happens during initialization
-	 * @hidden
 	 */
-	@Internal
-	public T build() { return build(null); }
+	public T create() { return create(null); }
 	
 	/**
 	 * Creates a new entity instance and sets the basic properties and relationships.
@@ -342,10 +360,8 @@ public class Template<T extends Entity> implements Documented
 	 * @param data the user input data
 	 * @return an instance of the target entity
 	 * @throws RuntimeException if an error happens during initialization
-	 * @hidden
 	 */
-	@Internal
-	public T build(Data data)
+	public T create(Data data)
 	{
 		if( data == null ) data = Data.map();
 		
@@ -415,33 +431,36 @@ public class Template<T extends Entity> implements Documented
 				configManager.watch(config, instance::config);
 		}
 		
-		if( builder != null )
-		{
-			try { builder.accept(data, instance); }
-			catch(Exception e)
-			{
-				e.printStackTrace();
-				Manager.of(Logger.class).warning(Template.class, e);
-				throw e;
-			}
-		}
+		// force the instance in the registry
+		Registry.add(instance);
 		
-		instance.onCreate().trigger(null);
+		// set the temporary instance for the callback
+		current.set(instance);
+		
+		// trigger the generic callback
+		try { onCreate.trigger(data); }
+		catch(Exception e) { Manager.of(Logger.class).warning(Template.class, e); }
+		
+		current.set(null);
+		
+		// trigger the instance specific callback
+		instance.onCreate().trigger(data);
+		
 		return instance;
 	}
 	
 	/**
-	 * The optional custom modifier
+	 * The callback for updated entities
 	 */
-	private BiConsumer<Data, T> modifier = null;
+	private Callback<Data, T> onUpdate = new Callback<>(() -> current.get());
 	
 	/**
-	 * Sets an optional custom modifier that can update an existing instance given user input. 
+	 * Sets a generic callback handler that will be called for every instance updated by this template. 
 	 * @param <U> the template type
-	 * @param modifier the custom modifier
+	 * @param handler the generic handler
 	 * @return this
 	 */
-	public <U extends Template<T>> U modifier(BiConsumer<Data, T> modifier) { this.modifier = modifier; return (U) this; }
+	public <U extends Template<T>> U onUpdate(BiConsumer<Data, T> handler) { this.onUpdate.then(handler); return (U) this; }
 	
 	/**
 	 * Updates an existing entity given new parameters. By default, all parameter values and relationships are updated.
@@ -452,7 +471,7 @@ public class Template<T extends Entity> implements Documented
 	 * @param instance the existing instance to modify
 	 * @return the modified instance
 	 */
-	public T modify(Data data, T instance)
+	public T update(Data data, T instance)
 	{
 		if( data == null || !data.isMap() || data.isEmpty() || instance == null ) return instance;
 		
@@ -491,9 +510,19 @@ public class Template<T extends Entity> implements Documented
 				instance.addUncheckedRelation(r.name(), link.asString("id"), link);
 			}
 		}
-		if( modifier != null ) modifier.accept(data, instance);
 		
-		instance.onUpdate().trigger(null);
+		// set the temporary instance for the callback
+		current.set(instance);
+		
+		// trigger the generic callback
+		try { onUpdate.trigger(data); }
+		catch(Exception e) { Manager.of(Logger.class).warning(Template.class, e); }
+		
+		current.set(null);
+		
+		// trigger the instance specific callback
+		instance.onUpdate().trigger(data);
+				
 		return instance;
 	}
 
