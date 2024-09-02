@@ -5,6 +5,7 @@ import java.util.Collection;
 import aeonics.data.Data;
 import aeonics.manager.Executor.Task;
 import aeonics.util.Callback;
+import aeonics.util.Functions.BiConsumer;
 import aeonics.util.Functions.Consumer;
 
 /**
@@ -14,6 +15,29 @@ import aeonics.util.Functions.Consumer;
  */
 public abstract class Snapshot extends Manager.Type
 {
+	/**
+	 * This class is used to track the owning module of the handler.
+	 * This can then be used by the Snapshot implementation to discriminate the process.
+	 */
+	protected static class ModuleAwareBiConsumer implements BiConsumer<Data, Snapshot>
+	{
+		private Consumer<Data> handler = null;
+		
+		/**
+		 * Private constructor to wrap the handler
+		 * @param handler the original handler
+		 */
+		private ModuleAwareBiConsumer(Consumer<Data> handler) { this.handler = handler; }
+		
+		/**
+		 * Returns the class definition of the original handler
+		 * @return the class definition of the original handler
+		 */
+		public Class<?> origin() { return handler == null ? null : handler.getClass(); }
+
+		public void accept(Data a, Snapshot b) throws Exception { if( handler != null ) handler.accept(a); }
+	}
+	
 	/**
 	 * Hardcoded manager type
 	 */
@@ -30,7 +54,7 @@ public abstract class Snapshot extends Manager.Type
 	 * For isolation purposes, a new empty data object will be provided per plugin (java module scope).
 	 * @param handler the snapshot handler
 	 */
-	public static void onSnapshot(Consumer<Data> handler) { createCallback.then((data, self) -> handler.accept(data)); }
+	public static void onSnapshot(Consumer<Data> handler) { createCallback.then(new ModuleAwareBiConsumer(handler)); }
 	
 	/**
 	 * The snapshot restore callback
@@ -43,7 +67,7 @@ public abstract class Snapshot extends Manager.Type
 	 * For isolation purposes, each plugin (java module scope) will be given its own data object.
 	 * @param handler the restore handler
 	 */
-	public static void onRestore(Consumer<Data> handler) { restoreCallback.then((data, self) -> handler.accept(data)); }
+	public static void onRestore(Consumer<Data> handler) { restoreCallback.then(new ModuleAwareBiConsumer(handler)); }
 	
 	/**
 	 * Creates a new snapshot using the specified suffix while the prefix is usually the date of the snapshot.

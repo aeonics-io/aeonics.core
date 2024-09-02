@@ -18,17 +18,26 @@ import aeonics.util.Tuples.Tuple;
  * It represents a login to the system, whether or not it is linked to a physical person, a service, or a device is
  * left at the sole discretion of the security {@link Provider}.
  * 
- * <p><b>Important implementation notes:</b> the {@link Type#id()} is the unique identifier for a user. It should be the login 
- * (or somewhat identifier) used to connect. On the other hand, the "name" property shall be the human printable user name. 
- * It may be identical to the login but may differ in case of remote identity provisioning.</p>
+ * <p><b>Important implementation notes:</b><br />
+ * The {@link Type#id()} is the unique identifier for a user, it does not carry information but is used to reference users.
+ * You should avoid duplicate IDs and those must be stable over time: never change and the same user must always have the same ID.<br />
+ * 
+ * The {@link Type#login()} is used to perform the authentication, it can be of any form: email, login name or opaque credentials.<br />
+ * 
+ * The {@link Type#name()} is the friendly name of the user. Usually it is identical to the login but it is not a requirement. 
+ * Since the name is free text there may be duplicates, so <b>never</b> rely on this information.</p>
+ * 
+ * <p>Any other property or profile information is not included by default, you can add them in the custom attributes property, fetch them somehow, or add
+ * a related profile entity.</p>
  * <p>Example:</p>
- * <ul>
- * <li>id: john.doe@example.com (built-in id() as login)</li>
- * <li>name: Monster2023 (default "name" property)</li>
- * <li>email: john.doe@example.com (custom attribute)</li>
- * <li>firstname: John (custom attribute)</li>
- * <li>lastname: Doe (custom attribute)</li>
- * </ul>
+ * <pre>
+ * id: 12345-678910
+ * login: john.doe@example.com
+ * name: Monster2023
+ * email: john.doe@example.com (custom attribute)
+ * firstname: John (custom attribute)
+ * lastname: Doe (custom attribute)
+ * </pre>
  */
 public class User extends Item<User.Type>
 {
@@ -40,6 +49,12 @@ public class User extends Item<User.Type>
 	 */
 	public static class Type extends Entity
 	{
+		/**
+		 * Returns the user login
+		 * @return the user login
+		 */
+		public String login() { return valueOf("login").asString(); }
+		
 		/**
 		 * Returns true if this user is active
 		 * @return true if this user is active
@@ -139,6 +154,11 @@ public class User extends Item<User.Type>
 				.format(Parameter.Format.BOOLEAN)
 				.optional(true)
 				.defaultValue(true))
+			.add(new Parameter("login")
+				.summary("Login")
+				.description("The login name used for authentication. If the login is not set, the user cannot login.")
+				.format(Parameter.Format.TEXT)
+				.optional(true))
 			.add(new Parameter("attributes")
 				.summary("Attributes")
 				.description("Additional user attributes in the form of a data map.")

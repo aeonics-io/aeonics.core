@@ -72,10 +72,12 @@ public class Callback<V, T> implements Iterable<BiConsumer<V, T>>
 		private BiConsumer<U, S> handler;
 		
 		/**
-		 * Wraps a handler to run only once
+		 * Wraps a handler to run only once.
+		 * This constructor is private such that only the Callback class can construct instances
+		 * using {@link Callback#once(BiConsumer)} or {@link Callback#once(Runnable)}.
 		 * @param t the handler to run
 		 */
-		public Once(BiConsumer<U, S> t) { handler = t; }
+		private Once(BiConsumer<U, S> t) { handler = t; }
 		
 		public void accept(U value, S target) throws Exception
 		{

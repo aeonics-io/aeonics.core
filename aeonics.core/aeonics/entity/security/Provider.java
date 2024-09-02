@@ -195,8 +195,9 @@ public abstract class Provider extends Item<Provider.Type>
 		{
 			public boolean supports(String user)
 			{
-				User.Type u = Registry.of(User.class).get(user);
 				if( user == null ) return false;
+				User.Type u = Registry.of(User.class).get((x) -> user.equals(x.login()));
+				if( u == null ) return false;
 				Data priv = privateData(u);
 				return !priv.isEmpty();
 			}
@@ -204,7 +205,7 @@ public abstract class Provider extends Item<Provider.Type>
 			public User.Type authenticate(Data context)
 			{
 				if( context == null || !context.isMap() || !context.containsKey("username") || !context.containsKey("password") ) return null;
-				User.Type user = Registry.of(User.class).get(context.asString("username"));
+				User.Type user = Registry.of(User.class).get((u) -> context.asString("username").equals(u.login()));
 
 				if( user == null ) return null;
 				Data priv = privateData(user);
@@ -243,13 +244,13 @@ public abstract class Provider extends Item<Provider.Type>
 				// check for clash
 				if( existing == null )
 				{
-					User.Type user = Registry.of(User.class).get(context.asString("username"));
+					User.Type user = Registry.of(User.class).get((u) -> context.asString("username").equals(u.login()));
 					if( user != null ) existing = user;
 				}
 				
 				// create user if needed
 				if( existing == null )
-					existing = Factory.of(User.class).get(User.class).create().name(context.asString("username"));
+					existing = Factory.of(User.class).get(User.class).create(Data.map().put("login", context.asString("username")).put("active", true)).name(context.asString("username"));
 
 				// already joined
 				if( !privateData(existing).isEmpty() ) return existing;
