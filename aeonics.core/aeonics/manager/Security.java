@@ -6,8 +6,10 @@ import java.util.List;
 
 import aeonics.data.Data;
 import aeonics.entity.Message;
+import aeonics.entity.Registry;
 import aeonics.entity.security.Policy;
 import aeonics.entity.security.Provider;
+import aeonics.entity.security.Role;
 import aeonics.entity.security.Token;
 import aeonics.entity.security.User;
 
@@ -125,17 +127,46 @@ public abstract class Security extends Manager.Type
 	 * @param user the user login
 	 * @return the list of providers that can support authenticating the provided user
 	 */
-	public abstract List<Provider.Type> providers(String user);
+	public List<Provider.Type> providers(String user)
+	{
+		return Registry.of(Provider.class).get((p) ->
+		{
+			try
+			{
+				return p.active() && p.supports(user);
+			}
+			catch(Exception t)
+			{
+				Manager.of(Logger.class).warning(Security.class, t);
+				return false;
+			}
+		});
+	}
 	
 	/**
 	 * Authenticate a user based on opaque authentication credentials. This is the prefered way to authenticate users.
-	 * <p>This method should call {@link Provider.Type#authenticate(Data)} on the selected provider.</p>
+	 * <p>This method calls {@link Provider.Type#authenticate(Data)} on the selected provider.</p>
 	 * <p>This method has the ability to intercept the authentication request and perform auditing, filtering or any other type of logic.</p>
 	 * @param provider the target identity provider
 	 * @param context the authentication context that shall be used by the provider to authenticate the user
 	 * @return the authenticated user instance or {@link User#ANONYMOUS} if no user matches
 	 */
-	public abstract User.Type authenticate(Provider.Type provider, Data context);
+	public User.Type authenticate(Provider.Type provider, Data context)
+	{
+		if( provider == null || !provider.active() ) return User.ANONYMOUS;
+		
+		try
+		{
+			User.Type user = provider.authenticate(context);
+			if( user == null ) return User.ANONYMOUS;
+			return user;
+		}
+		catch(Exception t)
+		{
+			Manager.of(Logger.class).warning(Security.class, t);
+		}
+		return User.ANONYMOUS;
+	}
 	
 	/**
 	 * Checks if the user is granted usage of the specified scope with the given context.
@@ -148,7 +179,14 @@ public abstract class Security extends Manager.Type
 	 * @param context the context data to check against rules and policies, may be null
 	 * @return true if the user is allowed given the scope and context
 	 */
-	public abstract boolean granted(User.Type user, String scope, Data context);
+	public boolean granted(User.Type user, String scope, Data context)
+	{
+		if( user == null ) return false;
+		if( user == User.SYSTEM ) return true;
+		if( user.hasRole(Role.SUPERADMIN) ) return true;
+		
+		return !isExplicitlyDenied(user, scope, context) && isExplicitlyAllowed(user, scope, context);
+	}
 	
 	/**
 	 * Evaluates if the user is explicitly denied access.
@@ -160,7 +198,28 @@ public abstract class Security extends Manager.Type
 	 * @param context the context data to check against rules and policies, may be null
 	 * @return true if the user is explicitly denied given the scope and context
 	 */
-	public abstract boolean isExplicitlyDenied(User.Type user, String scope, Data context);
+	public boolean isExplicitlyDenied(User.Type user, String scope, Data context)
+	{
+		if( user == null || scope == null ) return false;
+		if( user == User.SYSTEM ) return false;
+		if( user.hasRole(Role.SUPERADMIN) ) return false;
+		
+		try
+		{
+			for( Policy.Type policy : Registry.of(Policy.class) )
+			{
+				if( !policy.valueOf("scope").equals(scope) ) continue;
+				if( policy.isDenied(user, context) )
+					return true;
+			}
+			return false;
+		}
+		catch(Exception e)
+		{
+			Manager.of(Logger.class).warning(Security.class, e);
+		}
+		return false;
+	}
 	
 	/**
 	 * Evaluates if the user is explicitly allowed access.
@@ -172,7 +231,28 @@ public abstract class Security extends Manager.Type
 	 * @param context the context data to check against rules and policies, may be null
 	 * @return true if the user is explicitly allowed given the scope and context
 	 */
-	public abstract boolean isExplicitlyAllowed(User.Type user, String scope, Data context);
+	public boolean isExplicitlyAllowed(User.Type user, String scope, Data context)
+	{
+		if( user == null || scope == null ) return false;
+		if( user == User.SYSTEM ) return true;
+		if( user.hasRole(Role.SUPERADMIN) ) return true;
+		
+		try
+		{
+			for( Policy.Type policy : Registry.of(Policy.class) )
+			{
+				if( !policy.valueOf("scope").equals(scope) ) continue;
+				if( policy.isAllowed(user, context) )
+					return true;
+			}
+			return false;
+		}
+		catch(Exception e)
+		{
+			Manager.of(Logger.class).warning(Security.class, e);
+		}
+		return false;
+	}
 	
 	/**
 	 * Generates a {@link Token} for the provided user.

@@ -32,6 +32,9 @@ import aeonics.util.Tuples.Tuple;
  */
 public class Queue extends Item<Queue.Type>
 {
+	// TODO : Retry (with delay), and add a FIFO property to unshift or push the message
+	// the FIFO can be used whenever a message is delayed
+	
 	/**
 	 * This is the default entity to manage the orchestration of the different messages.
 	 * While all steps are naturally queued by the {@link Executor}, this instance
