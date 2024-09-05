@@ -97,10 +97,11 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	 * @param data the exported entity data
 	 * @return the entity
 	 * @see Entity#export()
+	 * @see Template#create(Data)
 	 * @throws RuntimeException if a matching template cannot be found
 	 * @throws IllegalArgumentException if the provided data is invalid or corrupted
 	 */
-	public static <U extends Entity> U build(Data data)
+	public static <U extends Entity> U create(Data data)
 	{
 		if( data == null || data.isEmpty("__type") || data.isEmpty("__category") )
 			throw new IllegalArgumentException("Invalid input data");
@@ -110,7 +111,37 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 		return template.create(data);
 	}
 	
-	public static <U extends Entity> U modify(U instance, Data data)
+	/**
+	 * Builds an instance of the exported or snapshotted entity.
+	 * @param <U> The entity category
+	 * @param <V> The entity type
+	 * @param category the entity category
+	 * @param type the entity type
+	 * @param data the user input data
+	 * @return the entity
+	 * @see Template#create(Data)
+	 * @throws RuntimeException if a matching template cannot be found
+	 * @throws IllegalArgumentException if the provided data is invalid or corrupted
+	 */
+	public static <U extends Entity, V extends Item<? super U>> U create(Class<? extends Item<? super U>> category, Class<V> type, Data data)
+	{
+		if( category == null || type == null )
+			throw new IllegalArgumentException("Invalid input data");
+		Template<U> template = Factory.of(category).get(type);
+		if( template == null )
+			throw new RuntimeException("No template found for " + StringUtils.toLowerCase(category) + " > " + StringUtils.toLowerCase(type));
+		return template.create(data);
+	}
+	
+	/**
+	 * Updates an existing entity given new parameters.
+	 * @param <U> The entity type
+	 * @param instance the existing instance to modify
+	 * @param data the new user input data
+	 * @return the modified instance
+	 * @see Template#update(Data, Entity)
+	 */
+	public static <U extends Entity> U update(U instance, Data data)
 	{
 		Template<U> template = Factory.of(instance.category()).get(instance.type());
 		if( template == null )

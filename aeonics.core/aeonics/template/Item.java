@@ -28,8 +28,8 @@ import aeonics.entity.Registry;
  *
  * <p>Example:</p>
  * <pre>
- * public class MyItem implements Item&lt;MyEntity&gt; {
- *     public static class MyEntity implements Entity { }
+ * public class MyItem extends Item&lt;MyEntity&gt; {
+ *     public static class MyEntity extends Entity { }
  *     
  *     protected Class&lt;? extends MyEntity&gt; defaultTarget() { return MyEntity.class; }
  *     protected Supplier&lt;? extends MyEntity&gt; defaultCreator() { return MyEntity::new; }

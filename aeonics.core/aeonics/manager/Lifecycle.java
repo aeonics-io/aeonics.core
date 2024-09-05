@@ -227,7 +227,7 @@ public abstract class Lifecycle extends Manager.Type
 		private static class Implementation extends Lifecycle
 		{
 			@Override
-			public void boot() { throw new IllegalStateException("Cannot boot on this manager"); }
+			public void boot() { throw new IllegalStateException("This Lifecycle implementation is a shim. You should use a real implementation instead."); }
 			public Phase phase() { return Phase.BOOT; }
 		}
 

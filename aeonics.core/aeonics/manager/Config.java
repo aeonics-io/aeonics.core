@@ -216,7 +216,7 @@ public abstract class Config extends Manager.Type
 	 * @return the previous value associated with that parameter if any
 	 * @throws IllegalArgumentException if the value does not match the parameter requirements
 	 */
-	public abstract Data set(String type, String name, Data value);
+	public abstract Data set(String type, String name, Object value);
 	
 	/**
 	 * Sets the value of the specified configuration parameter. 
@@ -226,7 +226,7 @@ public abstract class Config extends Manager.Type
 	 * @return the previous value associated with that parameter if any
 	 * @throws IllegalArgumentException if the value does not match the parameter requirements
 	 */
-	public Data set(Class<?> type, String name, Data value)
+	public Data set(Class<?> type, String name, Object value)
 	{
 		return set(StringUtils.toLowerCase(type), name, value);
 	}
@@ -239,7 +239,7 @@ public abstract class Config extends Manager.Type
 	 * @return the previous value associated with that parameter if any
 	 * @throws IllegalArgumentException if the value does not match the parameter requirements
 	 */
-	public Data set(Entity entity, String name, Data value)
+	public Data set(Entity entity, String name, Object value)
 	{
 		return set(entity.type(), name, value);
 	}
@@ -252,7 +252,7 @@ public abstract class Config extends Manager.Type
 	 * @param value the new parameter value
 	 * @return the previous value associated with that parameter if any, or null if the key is invalid
 	 */
-	public Data set(String key, Data value)
+	public Data set(String key, Object value)
 	{
 		if( key == null || key.isBlank() ) return null;
 		
