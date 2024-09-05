@@ -3,6 +3,7 @@ package aeonics.manager;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -38,6 +39,7 @@ public abstract class Executor extends Manager.Type
 	/**
 	 * Create an already resolved priority task.
 	 * @param value the resolved value
+	 * @param <T> the task return type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> priorityResolved(T value);
@@ -53,7 +55,7 @@ public abstract class Executor extends Manager.Type
 	 * Returns a new priority task that completes when all tasks are completed (successfully or not).
 	 * @param tasks the list of other tasks
 	 * @return the task object to eventually chain operations
-	 * @see Task#all(List)
+	 * @see Task#all(List, java.util.concurrent.Executor)
 	 */
 	public abstract Task<Void> priority(List<Task<?>> tasks);
 	
@@ -76,7 +78,6 @@ public abstract class Executor extends Manager.Type
 	
 	/**
 	 * Returns true if the current thread is a priority thread managed by this executor.
-	 * @param thread the thread
 	 * @return true if the current thread is a priority thread managed by this executor
 	 */
 	public boolean isPriority() { return isPriority(Thread.currentThread()); };
@@ -92,6 +93,7 @@ public abstract class Executor extends Manager.Type
 	/**
 	 * Create an already resolved normal task.
 	 * @param value the resolved value
+	 * @param <T> the task return type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> normalResolved(T value);
@@ -107,7 +109,7 @@ public abstract class Executor extends Manager.Type
 	 * Returns a new normal task that completes when all tasks are completed (successfully or not).
 	 * @param tasks the list of other tasks
 	 * @return the task object to eventually chain operations
-	 * @see Task#all(List)
+	 * @see Task#all(List, java.util.concurrent.Executor)
 	 */
 	public abstract Task<Void> normal(List<Task<?>> tasks);
 	
@@ -129,7 +131,6 @@ public abstract class Executor extends Manager.Type
 	
 	/**
 	 * Returns true if the current thread is a normal thread managed by this executor.
-	 * @param thread the thread
 	 * @return true if the current thread is a normal thread managed by this executor
 	 */
 	public boolean isNormal() { return isNormal(Thread.currentThread()); };
@@ -146,6 +147,7 @@ public abstract class Executor extends Manager.Type
 	/**
 	 * Create an already resolved background task.
 	 * @param value the resolved value
+	 * @param <T> the task return type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> backgroundResolved(T value);
@@ -161,7 +163,7 @@ public abstract class Executor extends Manager.Type
 	 * Returns a new background task that completes when all tasks are completed (successfully or not).
 	 * @param tasks the list of other tasks
 	 * @return the task object to eventually chain operations
-	 * @see Task#all(List)
+	 * @see Task#all(List, java.util.concurrent.Executor)
 	 */
 	public abstract Task<Void> background(List<Task<?>> tasks);
 	
@@ -184,7 +186,6 @@ public abstract class Executor extends Manager.Type
 	
 	/**
 	 * Returns true if the current thread is a background thread managed by this executor.
-	 * @param thread the thread
 	 * @return true if the current thread is a background thread managed by this executor
 	 */
 	public boolean isBackground() { return isBackground(Thread.currentThread()); };
@@ -201,6 +202,7 @@ public abstract class Executor extends Manager.Type
 	/**
 	 * Create an already resolved io task.
 	 * @param value the resolved value
+	 * @param <T> the task return type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> ioResolved(T value);
@@ -216,7 +218,7 @@ public abstract class Executor extends Manager.Type
 	 * Returns a new io task that completes when all tasks are completed (successfully or not).
 	 * @param tasks the list of other tasks
 	 * @return the task object to eventually chain operations
-	 * @see Task#all(List)
+	 * @see Task#all(List, java.util.concurrent.Executor)
 	 */
 	public abstract Task<Void> io(List<Task<?>> tasks);
 	
@@ -239,7 +241,6 @@ public abstract class Executor extends Manager.Type
 	
 	/**
 	 * Returns true if the current thread is an io thread managed by this executor.
-	 * @param thread the thread
 	 * @return true if the current thread is an io thread managed by this executor
 	 */
 	public boolean isIo() { return isIo(Thread.currentThread()); };
@@ -262,7 +263,7 @@ public abstract class Executor extends Manager.Type
 	protected static Task<Void> failed(Throwable value, java.util.concurrent.Executor executor) { return Task.failed(value, executor); }
 	
 	/**
-	 * Protected accessor to {@link Task#all(List)}
+	 * Protected accessor to {@link Task#all(List, java.util.concurrent.Executor)}
 	 * @param tasks the list of tasks to group together
 	 * @param executor the executor in which subsequent tasks should run
 	 * @return a new task that completes when all tasks are completed
@@ -407,7 +408,7 @@ public abstract class Executor extends Manager.Type
 		
 		/**
 		 * Schedules the given task to run in the specified executor.
-		 * Any {@link #then(Runnable)}, {@link #or(Runnable)} (or variants) methods will run synchronously in the same thread as the task.
+		 * Any {@link #then(aeonics.util.Functions.Runnable)}, {@link #or(aeonics.util.Functions.Runnable)} (or variants) methods will run synchronously in the same thread as the task.
 		 * @param <U> the return type of the task
 		 * @param task the task to run
 		 * @param executor the executor in which the task should run
@@ -420,7 +421,7 @@ public abstract class Executor extends Manager.Type
 		
 		/**
 		 * Schedules the given task to run in the specified executor.
-		 * Any {@link #then(Runnable)}, {@link #or(Runnable)} (or variants) methods will be rescheduled asynchronously in the same executor as the task.
+		 * Any {@link #then(aeonics.util.Functions.Runnable)}, {@link #or(aeonics.util.Functions.Runnable)} (or variants) methods will be rescheduled asynchronously in the same executor as the task.
 		 * @param <U>the return type of the task
 		 * @param task the task to run
 		 * @param executor the executor in which the task should run

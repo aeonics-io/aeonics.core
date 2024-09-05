@@ -18,13 +18,13 @@ import aeonics.util.Tuples.Tuple;
  * It represents a login to the system, whether or not it is linked to a physical person, a service, or a device is
  * left at the sole discretion of the security {@link Provider}.
  * 
- * <p><b>Important implementation notes:</b><br />
- * The {@link Type#id()} is the unique identifier for a user, it does not carry information but is used to reference users.
- * You should avoid duplicate IDs and those must be stable over time: never change and the same user must always have the same ID.<br />
+ * <p><b>Important implementation notes:</b></p>
+ * <p>The {@link Type#id()} is the unique identifier for a user, it does not carry information but is used to reference users.
+ * You should avoid duplicate IDs and those must be stable over time: never change and the same user must always have the same ID.</p>
  * 
- * The {@link Type#login()} is used to perform the authentication, it can be of any form: email, login name or opaque credentials.<br />
+ * <p>The {@link Type#login()} is used to perform the authentication, it can be of any form: email, login name or opaque credentials.</p>
  * 
- * The {@link Type#name()} is the friendly name of the user. Usually it is identical to the login but it is not a requirement. 
+ * <p>The {@link Type#name()} is the friendly name of the user. Usually it is identical to the login but it is not a requirement. 
  * Since the name is free text there may be duplicates, so <b>never</b> rely on this information.</p>
  * 
  * <p>Any other property or profile information is not included by default, you can add them in the custom attributes property, fetch them somehow, or add

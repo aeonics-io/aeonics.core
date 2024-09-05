@@ -29,6 +29,7 @@ public class Main extends Plugin
 		
 		String level = System.getProperty("AEONICS_MANAGER_LOGGER_LEVEL");
 		if( level == null || level.isBlank() ) level = System.getenv("AEONICS_MANAGER_LOGGER_LEVEL");
+		if( level == null || level.isBlank() ) level = "700";
 		try { Integer.parseInt(level); } catch(Exception e) { level = "700"; }
 		int initialLevel = Integer.parseInt(level);
 		System.setProperty("AEONICS_MANAGER_LOGGER_LEVEL", ""+initialLevel);

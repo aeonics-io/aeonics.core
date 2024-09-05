@@ -134,6 +134,17 @@ public abstract class Lifecycle extends Manager.Type
 	}
 	
 	/**
+	 * Registers a handler to run before other handlers in the specified phase.
+	 * All handlers are global and shared for all instances of the Lifecycle manager.
+	 * @param phase the application phase
+	 * @param handler the handler to run
+	 */
+	public static void before(Phase phase, Runnable handler) 
+	{
+		before(phase, Callback.once(handler));
+	}
+	
+	/**
 	 * Returns the global callback for the given phase
 	 * @param phase the phase
 	 * @return the matching callback
@@ -157,6 +168,17 @@ public abstract class Lifecycle extends Manager.Type
 	}
 	
 	/**
+	 * Registers a handler to run in the specified phase.
+	 * All handlers are global and shared for all instances of the Lifecycle manager.
+	 * @param phase the application phase
+	 * @param handler the handler to run
+	 */
+	public static void on(Phase phase, Runnable handler) 
+	{
+		on(phase, Callback.once(handler));
+	}
+	
+	/**
 	 * Returns the global callback for the given phase
 	 * @param phase the phase
 	 * @return the matching callback
@@ -177,6 +199,17 @@ public abstract class Lifecycle extends Manager.Type
 	public static void after(Phase phase, Once<Phase, Lifecycle> handler)
 	{
 		synchronized(phase) { after.computeIfAbsent(phase, (p) -> new Callback<Phase, Lifecycle>(() -> Manager.of(Lifecycle.class))).then(handler); }
+	}
+	
+	/**
+	 * Registers a handler to run after other handlers in the specified phase.
+	 * All handlers are global and shared for all instances of the Lifecycle manager.
+	 * @param phase the application phase
+	 * @param handler the handler to run
+	 */
+	public static void after(Phase phase, Runnable handler)
+	{
+		after(phase, Callback.once(handler));
 	}
 	
 	/**

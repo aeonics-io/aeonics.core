@@ -743,7 +743,10 @@ public abstract class Logger extends Manager.Type
 			{
 				try
 				{
-					this.level = Integer.parseInt(System.getProperty("AEONICS_MANAGER_LOGGER_LEVEL"));
+					String value = System.getProperty("AEONICS_MANAGER_LOGGER_LEVEL");
+					if( value == null || value.isBlank() ) value = System.getenv("AEONICS_MANAGER_LOGGER_LEVEL");
+					if( value == null || value.isBlank() ) value = "700";
+					this.level = Integer.parseInt(value);
 				}
 				catch(Exception e)
 				{
