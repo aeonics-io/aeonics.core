@@ -141,7 +141,7 @@ public abstract class Provider extends Item<Provider.Type>
 		@Override
 		public Data snapshot()
 		{
-			return super.snapshot().put("__key", key);
+			return super.snapshot().put("key", key);
 		}
 	}
 
@@ -158,7 +158,7 @@ public abstract class Provider extends Item<Provider.Type>
 				.defaultValue(true))
 			.onCreate((data, instance) -> 
 			{
-				if( data.containsKey("__key") ) ((Provider.Type)instance).key = data.asString("__key");
+				if( data.containsKey("key") ) ((Provider.Type)instance).key = data.asString("key");
 				else ((Provider.Type)instance).key = Manager.of(Security.class).randomHash();
 			});
 	}
@@ -250,7 +250,7 @@ public abstract class Provider extends Item<Provider.Type>
 				
 				// create user if needed
 				if( existing == null )
-					existing = Factory.of(User.class).get(User.class).create(Data.map().put("login", context.asString("username")).put("active", true)).name(context.asString("username"));
+					existing = Factory.of(User.class).get(User.class).create(Data.map().put("parameters", Data.map().put("login", context.asString("username")).put("active", true))).name(context.asString("username"));
 
 				// already joined
 				if( !privateData(existing).isEmpty() ) return existing;

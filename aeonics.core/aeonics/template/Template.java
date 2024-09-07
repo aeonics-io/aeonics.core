@@ -365,10 +365,10 @@ public class Template<T extends Entity> implements Documented
 	{
 		if( data == null ) data = Data.map();
 		
-		if( data.containsKey("__category") && !category().equals(data.asString("__category")) )
+		if( data.containsKey("category") && !category().equals(data.asString("category")) )
 			throw new RuntimeException("Entity category mismatch");
 		
-		if( data.containsKey("__type") && !StringUtils.toLowerCase(type()).equals(data.asString("__type")) )
+		if( data.containsKey("type") && !StringUtils.toLowerCase(type()).equals(data.asString("type")) )
 			throw new RuntimeException("Entity type mismatch");
 		
 		Supplier<? extends T> creator = creator();
@@ -380,33 +380,45 @@ public class Template<T extends Entity> implements Documented
 			throw new RuntimeException("Entity instance does not match the target type");
 		
 		boolean internal = instance.internal();
-		if( data.containsKey("__internal") ) internal = data.asBool("__internal");
+		if( data.containsKey("internal") ) internal = data.asBool("internal");
 		
-		instance.initialize(category(), StringUtils.toLowerCase(type()), data.asString("__id"), internal);
+		instance.initialize(category(), StringUtils.toLowerCase(type()), data.asString("id"), internal);
 		if( !instance.category().equals(category()) )
 			throw new RuntimeException("Entity category mismatch: " + instance.category() + " <> " + category());
 		if( !instance.type().equals(StringUtils.toLowerCase(type())) )
 			throw new RuntimeException("Entity type mismatch: " + instance.type() + " <> " + type());
 		
-		if( !data.containsKey("__name") )
+		if( !data.containsKey("name") )
 			instance.name(StringUtils.toLowerCase(target()) + "-" + instance.id());
 		else
-			instance.name(data.asString("__name"));
-				
+			instance.name(data.asString("name"));
+		
+		Data data_parameters;
+		if( data.containsKey("parameters") && !data.isNull("parameters") ) data_parameters = data.get("parameters");
+		else data_parameters = Data.map();
+		if( !data_parameters.isMap() )
+			throw new RuntimeException("Invalid entity parameters");
+		
 		for( Parameter p : parameters.values() )
 		{
-			Data value = data.get(p.name());
+			Data value = data_parameters.get(p.name());
 			if( enforceParameterValidation() && !p.validate(value) )
 				throw new RuntimeException("Invalid value for parameter " + p.name());
 			
 			instance.parameters().put(p.name(), Tuple.of(value, p));
 		}
 		
+		Data data_relationships;
+		if( data.containsKey("relationships") && !data.isNull("relationships") ) data_relationships = data.get("relationships");
+		else data_relationships = Data.map();
+		if( !data_relationships.isMap() )
+			throw new RuntimeException("Invalid entity relationships");
+		
 		for( Relationship r : relationships.values() )
 		{
 			instance.defineRelation(r);
 			
-			Data rels = data.containsKey(r.name()) ? data.get(r.name()) : Data.list();
+			Data rels = data_relationships.containsKey(r.name()) ? data_relationships.get(r.name()) : Data.list();
 			if( !rels.isList() ) rels = Data.list().add(rels);
 			
 			if( (r.min() > 0 && rels.size() < r.min()) || (r.max() > 0 && rels.size() > r.max()) )
@@ -470,16 +482,26 @@ public class Template<T extends Entity> implements Documented
 	 * @param data the new user input data
 	 * @param instance the existing instance to modify
 	 * @return the modified instance
+	 * @throws RuntimeException if an error happens during the update
 	 */
 	public T update(Data data, T instance)
 	{
 		if( data == null || !data.isMap() || data.isEmpty() || instance == null ) return instance;
 		
+		if( data.containsKey("name") )
+			instance.name(data.asString("name"));
+		
+		Data data_parameters;
+		if( data.containsKey("parameters") && !data.isNull("parameters") ) data_parameters = data.get("parameters");
+		else data_parameters = Data.map();
+		if( !data_parameters.isMap() )
+			throw new RuntimeException("Invalid entity parameters");
+		
 		for( Parameter p : parameters.values() )
 		{
-			if( !data.containsKey(p.name()) ) continue;
+			if( !data_parameters.containsKey(p.name()) ) continue;
 			
-			Data value = data.get(p.name());
+			Data value = data_parameters.get(p.name());
 			if( enforceParameterValidation() && !p.validate(value) )
 				throw new RuntimeException("Invalid value for parameter " + p.name());
 			
@@ -488,12 +510,18 @@ public class Template<T extends Entity> implements Documented
 			else t.a = value;
 		}
 		
+		Data data_relationships;
+		if( data.containsKey("relationships") && !data.isNull("relationships") ) data_relationships = data.get("relationships");
+		else data_relationships = Data.map();
+		if( !data_relationships.isMap() )
+			throw new RuntimeException("Invalid entity relationships");
+		
 		for( Relationship r : relationships.values() )
 		{
-			if( !data.containsKey(r.name()) ) continue;
+			if( !data_relationships.containsKey(r.name()) ) continue;
 			
 			instance.clearRelation(r.name());
-			Data rels = data.get(r.name());
+			Data rels = data_relationships.get(r.name());
 			if( !rels.isList() ) rels = Data.list().add(rels);
 			
 			if( (r.min() > 0 && rels.size() < r.min()) || (r.max() > 0 && rels.size() > r.max()) )
@@ -544,8 +572,8 @@ public class Template<T extends Entity> implements Documented
 		}
 		
 		return Documented.super.export()
-			.put("__type_plugin", type().getModule().getName())
-			.put("__target_plugin", target().getModule().getName())
+			.put("type_plugin", type().getModule().getName())
+			.put("target_plugin", target().getModule().getName())
 			.put("parameters", p)
 			.put("relations", r)
 			.put("configs", c)

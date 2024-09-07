@@ -41,8 +41,8 @@ import aeonics.util.Tuples.Tuple;
  */
 public class User extends Item<User.Type>
 {
-	public static final User.Type ANONYMOUS = new User().template().create(Data.map().put("__id", "10000000-1100000000000000")).name("ANONYMOUS").internal(true);
-	public static final User.Type SYSTEM = new User().template().create(Data.map().put("__id", "10000000-1200000000000000")).name("SYSTEM").internal(true);
+	public static final User.Type ANONYMOUS = new User().template().create(Data.map().put("id", "10000000-1100000000000000")).name("ANONYMOUS").internal(true);
+	public static final User.Type SYSTEM = new User().template().create(Data.map().put("id", "10000000-1200000000000000")).name("SYSTEM").internal(true);
 	
 	/**
 	 * Superclass for all user entities.

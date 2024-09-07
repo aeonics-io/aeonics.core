@@ -33,11 +33,11 @@ import aeonics.util.Callback.Once;
  * 		<li>{@link Phase#LOAD}: when all plugins have been preloaded using {@link Plugin#start()}, the load phase begins.
  * 			<ol>
  * 				<li><b>before:</b> in this stage, you may perform some of your own initialization logic but it should not rely on any
- * 					other plugin, managers, registry or factory. All managers are created during this stage.</li>
- * 				<li><b>during:</b> all the managers are available but not populated yet. At this stage,
+ * 					other plugin, managers, registry or factory.</li>
+ * 				<li><b>during:</b> the {@link Lifecycle}, {@link Executor} and {@link Config} managers are available but not populated yet. At this stage,
  * 					you can register {@link Factory} items and declare {@link Config} parameters.</li>
  * 				<li><b>after:</b> this step is the last moment to register an initial {@link Snapshot#onRestore(aeonics.util.Functions.Consumer)} 
- * 					handler.</li>
+ * 					handler. All remaining managers are available but not fully populated yet.</li>
  * 			</ol>
  * 		</li>
  * 		<li>{@link Phase#CONFIG}: when managers and entity types are registered, the initial configuration loading begins.
@@ -139,7 +139,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public static void before(Phase phase, Runnable handler) 
+	public static void before(Phase phase, aeonics.util.Functions.Runnable handler) 
 	{
 		before(phase, Callback.once(handler));
 	}
@@ -173,7 +173,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public static void on(Phase phase, Runnable handler) 
+	public static void on(Phase phase, aeonics.util.Functions.Runnable handler) 
 	{
 		on(phase, Callback.once(handler));
 	}
@@ -207,7 +207,7 @@ public abstract class Lifecycle extends Manager.Type
 	 * @param phase the application phase
 	 * @param handler the handler to run
 	 */
-	public static void after(Phase phase, Runnable handler)
+	public static void after(Phase phase, aeonics.util.Functions.Runnable handler)
 	{
 		after(phase, Callback.once(handler));
 	}

@@ -103,11 +103,11 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	 */
 	public static <U extends Entity> U create(Data data)
 	{
-		if( data == null || data.isEmpty("__type") || data.isEmpty("__category") )
+		if( data == null || data.isEmpty("type") || data.isEmpty("category") )
 			throw new IllegalArgumentException("Invalid input data");
-		Template<U> template = Factory.of(data.asString("__category")).get(data.asString("__type"));
+		Template<U> template = Factory.of(data.asString("category")).get(data.asString("type"));
 		if( template == null )
-			throw new RuntimeException("No template found for " + data.asString("__category") + " > " + data.asString("__type"));
+			throw new RuntimeException("No template found for " + data.asString("category") + " > " + data.asString("type"));
 		return template.create(data);
 	}
 	

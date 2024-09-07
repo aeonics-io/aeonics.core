@@ -35,7 +35,7 @@ public interface Documented extends Exportable
 			.put("name", name())
 			.put("summary", summary())
 			.put("description", description())
-			.put("__class", getClass().getName())
-			.put("__plugin", getClass().getModule().getName());
+			.put("class", getClass().getName())
+			.put("plugin", getClass().getModule().getName());
 	}
 }

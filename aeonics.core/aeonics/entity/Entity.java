@@ -254,7 +254,7 @@ public class Entity implements Exportable, Snapshotable
 	
 	/**
 	 * Sets the value of the specified parameter.
-	 * <p><b>Caution:</b> using this method manually will bypass the {@link Template#update(Data, Entity)} and will ignore the potential modifier.</p>
+	 * <p><b>Caution:</b> using this method manually will bypass the {@link Template#update(Data, Entity)} and will ignore the potential onUpdate handlers.</p>
 	 * @param parameter the parameter name
 	 * @param value the new value
 	 * @param <T> this entity type
@@ -492,7 +492,7 @@ public class Entity implements Exportable, Snapshotable
 	 * as well as all declared {@link #parameters()} and all declared {@link #relationships()}.
 	 * 
 	 * <p>If there are potentially private or confidential data returned by the default implementation,
-	 * you should override it and modify the result before returning it.</p>
+	 * you should override it and modify the result before returning it.</p> 
 	 * 
 	 * <p>Note that you may provide your own custom implementation although it may introduce inconsistencies with
 	 * the frontent application in case of unexpected format or missing information. Therefore, it is always
@@ -501,22 +501,27 @@ public class Entity implements Exportable, Snapshotable
 	public Data export()
 	{
 		Data d = Data.map()
-			.put("__id", id())
-			.put("__name", name())
-			.put("__internal", internal())
-			.put("__category", category())
-			.put("__type", type())
-			.put("__class", getClass().getName())
-			.put("__plugin", getClass().getModule().getName());
+			.put("id", id())
+			.put("name", name())
+			.put("internal", internal())
+			.put("category", category())
+			.put("type", type())
+			.put("class", getClass().getName())
+			.put("plugin", getClass().getModule().getName());
 		
+		Data p = Data.map();
 		for( Tuple<Data, Parameter> t : parameters.values() )
-			d.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
+			p.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
+		d.put("parameters", p);
+		
+		Data r = Data.map();
 		for( Tuple<List<Data>, Relationship> t : relationships.values() )
 		{
 			Data l = Data.list();
 			for( Data x : t.a ) l.add(x);
-			d.put(t.b.name(), l);
+			r.put(t.b.name(), l);
 		}
+		d.put("relationships", r);
 		
 		return d;
 	}
@@ -542,22 +547,27 @@ public class Entity implements Exportable, Snapshotable
 		CheckCaller.require(Manager.of(Snapshot.class).getClass(), null);
 		
 		Data d = Data.map()
-			.put("__id", id())
-			.put("__name", name())
-			.put("__internal", internal())
-			.put("__category", category())
-			.put("__type", type())
-			.put("__class", getClass().getName())
-			.put("__plugin", getClass().getModule().getName());
+			.put("id", id())
+			.put("name", name())
+			.put("internal", internal())
+			.put("category", category())
+			.put("type", type())
+			.put("class", getClass().getName())
+			.put("plugin", getClass().getModule().getName());
 		
+		Data p = Data.map();
 		for( Tuple<Data, Parameter> t : parameters.values() )
 			d.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
+		d.put("parameters", p);
+		
+		Data r = Data.map();
 		for( Tuple<List<Data>, Relationship> t : relationships.values() )
 		{
 			Data l = Data.list();
 			for( Data x : t.a ) l.add(x);
 			d.put(t.b.name(), l);
 		}
+		d.put("relationships", r);
 		
 		return d;
 	}

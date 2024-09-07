@@ -15,6 +15,7 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Iterator;
@@ -37,6 +38,7 @@ import javax.net.ssl.X509TrustManager;
 import aeonics.data.Data;
 import aeonics.util.Callback;
 import aeonics.util.Internal;
+import aeonics.util.Json;
 import aeonics.util.Tuples.Tuple;
 
 /**
@@ -501,20 +503,42 @@ public abstract class Network extends Manager.Type
 			{
 				SSLParameters params = ssl.getSSLParameters();
 				
-				if( options.protocols() != null )
+				List<String> protocols = options.protocols();
+				if( protocols == null || protocols.isEmpty() )
+				{
+					if( Manager.of(Config.class).contains(Network.class, "tls.default.protocols") )
+					{
+						Data defaults = Json.decode(Manager.of(Config.class).get(Network.class, "tls.default.protocols").asString());
+						protocols = new ArrayList<String>(defaults.size());
+						for( Data p : defaults ) protocols.add(p.asString());
+					}
+				}
+				
+				if( protocols != null && !protocols.isEmpty() )
 				{
 					List<String> supported = new LinkedList<String>();
 					Collections.addAll(supported, ssl.getSupportedProtocols()); 
-					supported.retainAll(options.protocols());
+					supported.retainAll(protocols);
 					if( !supported.isEmpty() )
 						params.setProtocols(supported.toArray(new String[supported.size()]));
 				}
 				
-				if( options.ciphers() != null )
+				List<String> ciphers = options.protocols();
+				if( ciphers == null || ciphers.isEmpty() )
+				{
+					if( Manager.of(Config.class).contains(Network.class, "tls.default.ciphers") )
+					{
+						Data defaults = Json.decode(Manager.of(Config.class).get(Network.class, "tls.default.ciphers").asString());
+						ciphers = new ArrayList<String>(defaults.size());
+						for( Data c : defaults ) ciphers.add(c.asString());
+					}
+				}
+				
+				if( ciphers != null && !ciphers.isEmpty() )
 				{
 					List<String> supported = new LinkedList<String>();
 					Collections.addAll(supported, ssl.getSupportedCipherSuites());
-					supported.retainAll(options.ciphers());
+					supported.retainAll(ciphers);
 					if( !supported.isEmpty() )
 						params.setCipherSuites(supported.toArray(new String[supported.size()]));
 				}

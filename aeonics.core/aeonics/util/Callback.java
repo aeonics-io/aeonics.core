@@ -102,7 +102,7 @@ public class Callback<V, T> implements Iterable<BiConsumer<V, T>>
 	 * @param handler the handler that should only run once
 	 * @return a handler that will only run once
 	 */
-	public static <U, S> Once<U, S> once(Runnable handler) { Objects.requireNonNull(handler); return new Once<U, S>((value, target) -> { handler.run(); }); }
+	public static <U, S> Once<U, S> once(aeonics.util.Functions.Runnable handler) { Objects.requireNonNull(handler); return new Once<U, S>((value, target) -> { handler.run(); }); }
 	
 	/**
 	 * The current handler

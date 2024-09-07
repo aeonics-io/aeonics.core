@@ -327,39 +327,16 @@ public abstract class Origin extends Item<Origin.Type>
 			public void stop() { stopped(true); }
 		}
 		
-		protected Class<? extends Scheduled.Type> defaultTarget() { return Scheduled.Type.class; }
-		protected Supplier<? extends Scheduled.Type> defaultCreator() { return Scheduled.Type::new; }
+		protected Class<? extends Basic.Type> defaultTarget() { return Basic.Type.class; }
+		protected Supplier<? extends Basic.Type> defaultCreator() { return Basic.Type::new; }
 		
 		@Override
 		public Origin.Template template()
 		{
 			return super.template()
-				.summary("Scheduled origin")
-				.description("This data origin is triggered automatically at regular interval.")
-				.add(new Parameter("rule")
-					.summary("Recurring rule")
-					.description("The recurrence is defined by a RFC-5545 RRULE and DTSART string.")
-					.format(Parameter.Format.TEXT))
-				.onCreate((data, instance) -> 
-				{
-					((Origin.Scheduled.Type)instance).cron = new Cron() { }
-						.template()
-						.create()
-						.task((time) -> { ((Origin.Scheduled.Type)instance).runTask(time); })
-						.start(ZonedDateTime.now())
-						.rule(data.asString("rule"));
-						
-					if( Manager.of(Lifecycle.class).phase() == Lifecycle.Phase.RUN )
-						((Origin.Scheduled.Type)instance).start();
-				})
-				.onUpdate((data, instance) -> 
-				{
-					if( data.containsKey("rule") )
-					{
-						((Origin.Scheduled.Type)instance).cron.rule(data.asString("rule"));
-						Manager.of(Scheduler.class).refresh();
-					}
-				});
+				.summary("Basic Origin")
+				.description("This data origin does not emit any data unless targetted directly by other entities.")
+				;
 		}
 	}
 	
