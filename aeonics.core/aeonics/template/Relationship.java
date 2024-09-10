@@ -79,19 +79,27 @@ public class Relationship implements Documented
 	/**
 	 * The target entity category to relate to
 	 */
-	private Class<? extends Item<? extends Entity>> category = null;
+	private String category = null;
 	/**
 	 * Returns the target entity category to relate to
 	 * @return the target entity type to relate to
 	 */
-	public Class<? extends Item<? extends Entity>> category() { return category; }
+	public String category() { return category; }
 	/**
 	 * Sets the target entity category to relate to
 	 * @param <R> the relationship type
 	 * @param value the target entity category to relate to
 	 * @return this
 	 */
-	public <R extends Relationship> R category(Class<? extends Item<? extends Entity>> value) { category = value; return (R)this; }
+	public <R extends Relationship> R category(Class<? extends Item<? extends Entity>> value) { category = StringUtils.toLowerCase(value); return (R)this; }
+	
+	/**
+	 * Sets the target entity category to relate to
+	 * @param <R> the relationship type
+	 * @param value the target entity category to relate to
+	 * @return this
+	 */
+	public <R extends Relationship> R category(String value) { category = value; return (R)this; }
 	
 	/**
 	 * The minimum number of relations

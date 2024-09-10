@@ -302,6 +302,17 @@ public class Entity implements Exportable, Snapshotable
 	}
 	
 	/**
+	 * Removes an existing relationship of this entity.
+	 * @param value the relationship name
+	 * @hidden
+	 */
+	@Internal
+	public void removeRelation(String value)
+	{
+		relationships.remove(value);
+	}
+	
+	/**
 	 * Fetches all related entities from the registry along with the relation properties.
 	 * The returned iteratory may include null entity component.
 	 * @param <R> The related entity type
@@ -319,11 +330,11 @@ public class Entity implements Exportable, Snapshotable
 			return new Iterator<Tuple<R, Data>>()
 			{
 				public boolean hasNext() { return i.hasNext(); }
-				@SuppressWarnings({ "unchecked", "rawtypes" })
+				@SuppressWarnings({ "unchecked" })
 				public Tuple<R, Data> next()
 				{
 					Data data = i.next();
-					return Tuple.of((R) Registry.of((Class) r.b.category()).get(data.asString("id")), data);
+					return Tuple.of((R) Registry.of(r.b.category()).get(data.asString("id")), data);
 				}
 				@Override
 				public void remove() { i.remove(); }
@@ -389,7 +400,7 @@ public class Entity implements Exportable, Snapshotable
 		if( entity == null ) throw new IllegalArgumentException("Invalid entity");
 		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
 		if( r == null ) throw new IllegalArgumentException("Invalid relationship name");
-		if( !StringUtils.toLowerCase(r.b.category()).equals(entity.category()) ) throw new IllegalArgumentException("Entity category mismatch");
+		if( !r.b.category().equals(entity.category()) ) throw new IllegalArgumentException("Entity category mismatch");
 		if( r.b.max() > 0 && r.b.max() <= r.a.size() ) throw new RuntimeException("Maximum number of relations reached");
 		
 		if( parameters == null || parameters.isNull() ) parameters = Data.map();
@@ -557,7 +568,7 @@ public class Entity implements Exportable, Snapshotable
 		
 		Data p = Data.map();
 		for( Tuple<Data, Parameter> t : parameters.values() )
-			d.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
+			p.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
 		d.put("parameters", p);
 		
 		Data r = Data.map();
@@ -565,7 +576,7 @@ public class Entity implements Exportable, Snapshotable
 		{
 			Data l = Data.list();
 			for( Data x : t.a ) l.add(x);
-			d.put(t.b.name(), l);
+			r.put(t.b.name(), l);
 		}
 		d.put("relationships", r);
 		
