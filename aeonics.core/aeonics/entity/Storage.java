@@ -95,7 +95,7 @@ public abstract class Storage extends Item<Storage.Type>
 	 */
 	public static String resolve(String root, String path)
 	{
-		return normalize(root + "/" + path);
+		return normalize(normalize(root) + "/" + normalize(path));
 	}
 	
 	/**
@@ -187,8 +187,7 @@ public abstract class Storage extends Item<Storage.Type>
 		 * If the path targets a final entry, that entry is returned.
 		 * If the path targets a parent entry (a directory), all final entries are returned recursively.
 		 * 
-		 * <p>The returned entries are relative to the provided path, so if the path "/foo/bar" is provided and a child
-		 * is "/foo/bar/beef/dead", then "beef/dead" is returned.</p>
+		 * <p>The returned entries are the full path to the root.</p>
 		 * 
 		 * @param path the path entry
 		 * @return the list of matching entries
