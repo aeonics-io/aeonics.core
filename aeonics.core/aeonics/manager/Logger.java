@@ -704,7 +704,7 @@ public abstract class Logger extends Manager.Type
 		
 		for( Throwable x = t; x != null; x = x.getCause() )
 		{
-			b.append(t.toString());
+			b.append(x.toString());
 			b.append('\n');
 			
 			for( StackTraceElement e : x.getStackTrace() )

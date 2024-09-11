@@ -32,7 +32,7 @@ import aeonics.util.StringUtils;
  *     // add all your template documentation
  *     .summary("Does something")
  *     
- *     .build() // &lt;-- create an instance of the entity and register it in the registry
+ *     .create() // &lt;-- create an instance of the entity and register it in the registry
  *     
  *     // set the processing function
  *     .process((message, input, outputs) -&gt; null); // &lt;-- the process logic
@@ -58,7 +58,7 @@ import aeonics.util.StringUtils;
  *     // add all your template documentation
  *     .summary("Do something")
  *     
- *     .build(); // &lt;-- create an instance of the entity and register it in the registry
+ *     .create(); // &lt;-- create an instance of the entity and register it in the registry
  * </pre>
  */
 public abstract class Action extends Item<Action.Type>

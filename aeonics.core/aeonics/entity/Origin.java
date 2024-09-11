@@ -48,7 +48,7 @@ import aeonics.util.Tuples.Tuple;
  *     // add all your template documentation
  *     .summary("Does something")
  *     
- *     .build() // &lt;-- create an instance of the entity and register it in the registry
+ *     .create() // &lt;-- create an instance of the entity and register it in the registry
  *     
  *     // set the processing function
  *     .&lt;Origin.Background&gt;cast()
@@ -74,7 +74,7 @@ import aeonics.util.Tuples.Tuple;
  *     // add all your template documentation
  *     .summary("Do something")
  *     
- *     .build(); // &lt;-- create an instance of the entity and register it in the registry
+ *     .create(); // &lt;-- create an instance of the entity and register it in the registry
  * </pre>
  */
 public abstract class Origin extends Item<Origin.Type>

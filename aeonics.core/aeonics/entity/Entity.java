@@ -51,7 +51,7 @@ public class Entity implements Exportable, Snapshotable
 	 * Performs an unsafe cast to the specified subtype.
 	 * <p>This method is useful when using the chained method flow with templates:</p>
 	 * <pre>
-	 * new Item().template().build() // &lt;-- returns a generic Entity
+	 * new Item().template().create() // &lt;-- returns a generic Entity
 	 *     .&lt;MySubclass&gt;cast() // &lt;-- unsafe cast
 	 *     .foo();
 	 * </pre>

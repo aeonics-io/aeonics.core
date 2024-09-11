@@ -41,7 +41,7 @@ import aeonics.util.StringUtils;
  *     // add all your template documentation
  *     .summary("My favourite database")
  *     
- *     .build() // &lt;-- create an instance of the entity and register it in the registry
+ *     .create() // &lt;-- create an instance of the entity and register it in the registry
  *     
  *     // set the processing function
  *     .connection(() -&gt; { return new Database.PooledConnection(item, null); }); // &lt;-- the connection establishment function
@@ -65,7 +65,7 @@ import aeonics.util.StringUtils;
  *     // add all your template documentation
  *     .summary("My database")
  *     
- *     .build(); // &lt;-- create an instance of the entity and register it in the registry
+ *     .create(); // &lt;-- create an instance of the entity and register it in the registry
  * </pre>
  */
 public abstract class Database extends Item<Database.Type>
