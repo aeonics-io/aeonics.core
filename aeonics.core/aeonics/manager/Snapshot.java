@@ -93,6 +93,23 @@ public abstract class Snapshot extends Manager.Type
 	public abstract Task<Void> restore(String snapshot);
 	
 	/**
+	 * Uploads a snapshot in this system.
+	 * 
+	 * @param snapshot the snapshot content
+	 * @throws IllegalArgumentException if the snapshot is not compatible with this system
+	 */
+	public abstract void upload(byte[] snapshot);
+	
+	/**
+	 * Downloads a snapshot.
+	 * 
+	 * @param snapshot the snapshot name
+	 * @return the opaque shapshot content
+	 * @throws IllegalArgumentException if the specified snapshot does not exist
+	 */
+	public abstract byte[] download(String snapshot);
+	
+	/**
 	 * Lists all available snapshots
 	 * @return the list of snapshots
 	 */
