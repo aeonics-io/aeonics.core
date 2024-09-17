@@ -38,7 +38,6 @@ import javax.net.ssl.X509TrustManager;
 import aeonics.data.Data;
 import aeonics.util.Callback;
 import aeonics.util.Internal;
-import aeonics.util.Json;
 import aeonics.util.Tuples.Tuple;
 
 /**
@@ -508,9 +507,14 @@ public abstract class Network extends Manager.Type
 				{
 					if( Manager.of(Config.class).contains(Network.class, "tls.default.protocols") )
 					{
-						Data defaults = Json.decode(Manager.of(Config.class).get(Network.class, "tls.default.protocols").asString());
-						protocols = new ArrayList<String>(defaults.size());
-						for( Data p : defaults ) protocols.add(p.asString());
+						Data defaults = Manager.of(Config.class).get(Network.class, "tls.default.protocols");
+						if( defaults.isList() && !defaults.isEmpty() )
+						{
+							protocols = new ArrayList<String>(defaults.size());
+							for( Data p : defaults ) protocols.add(p.asString());
+						}
+						else
+							protocols = null;
 					}
 				}
 				
@@ -528,9 +532,14 @@ public abstract class Network extends Manager.Type
 				{
 					if( Manager.of(Config.class).contains(Network.class, "tls.default.ciphers") )
 					{
-						Data defaults = Json.decode(Manager.of(Config.class).get(Network.class, "tls.default.ciphers").asString());
-						ciphers = new ArrayList<String>(defaults.size());
-						for( Data c : defaults ) ciphers.add(c.asString());
+						Data defaults = Manager.of(Config.class).get(Network.class, "tls.default.ciphers");
+						if( defaults.isList() && !defaults.isEmpty() )
+						{
+							ciphers = new ArrayList<String>(defaults.size());
+							for( Data c : defaults ) ciphers.add(c.asString());
+						}
+						else
+							ciphers = null;
 					}
 				}
 				

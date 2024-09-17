@@ -10,6 +10,7 @@ import java.net.URLStreamHandler;
 import aeonics.Boot;
 import aeonics.Plugin;
 import aeonics.Protocols;
+import aeonics.entity.Database;
 import aeonics.entity.Origin;
 import aeonics.entity.Probe;
 import aeonics.entity.Queue;
@@ -106,12 +107,14 @@ public class Main extends Plugin
 	public void onBeforeLoad()
 	{
 		// basic entities
+		Factory.add(new Database());
 		Factory.add(new Origin.Basic());
 		Factory.add(new Origin.Scheduled());
 		Factory.add(new Probe());
 		Factory.add(new Queue());
 		Factory.add(new Storage.File());
 		Factory.add(new Storage.Memory());
+		Factory.add(new Storage.Database());
 		Factory.add(new Topic());
 		
 		// security entities

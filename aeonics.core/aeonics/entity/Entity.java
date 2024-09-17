@@ -22,6 +22,7 @@ import aeonics.util.Callback;
 import aeonics.util.CheckCaller;
 import aeonics.util.Exportable;
 import aeonics.util.Internal;
+import aeonics.util.Json;
 import aeonics.util.Snapshotable;
 import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
@@ -248,6 +249,8 @@ public class Entity implements Exportable, Snapshotable
 	{
 		Tuple<Data, Parameter> t = parameters().get(parameter);
 		if( t == null ) return Data.empty();
+		if( t.b.format().equals(Parameter.Format.JSON) && t.a.isString() )
+			t.a = Json.decode(t.a.asString());
 		if( !t.b.bindable() ) return t.a;
 		return t.b.resolve(t.a, context);
 	}
@@ -343,6 +346,26 @@ public class Entity implements Exportable, Snapshotable
 	}
 	
 	/**
+	 * Fetches the first relation entity.
+	 * @param <R> The related entity type
+	 * @param name the name of the relationship
+	 * @return the first entity found for that relation, or null if none are found
+	 */
+	public <R extends Entity> R firstRelation(String name)
+	{
+		Tuple<List<Data>, Relationship> r = relationships.get(name);
+		if( r == null ) return null;
+		
+		Registry<?> registry = Registry.of(r.b.category());
+		for( Data data : r.a )
+		{
+			Entity e = registry.get(data.asString("id"));
+			if( e != null ) return e.cast();
+		}
+		return null;
+	}
+	
+	/**
 	 * Adds a relation to the provided entity
 	 * @param relationship the relationship name
 	 * @param entity the related entity
@@ -418,6 +441,31 @@ public class Entity implements Exportable, Snapshotable
 	}
 	
 	/**
+	 * Returns whether or not this entity is related to the specified one
+	 * @param relationship the relationship name
+	 * @param entity the related entity
+	 * @returns true if this entity is related to the target one, false otherwise
+	 * @throws IllegalArgumentException if the relationship does not exist
+	 * @throws RuntimeException if the minimum number of relations is reached
+	 */
+	public boolean hasRelation(String relationship, Entity entity)
+	{
+		if( entity == null ) return false;
+		
+		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
+		if( r == null ) throw new IllegalArgumentException("Invalid relationship name");
+		
+		for( int i = 0; i < r.a.size(); i++ )
+		{
+			if( r.a.get(i).asString("id").equals(entity.id()) )
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
 	 * Removes a relation with the specified entity
 	 * @param relationship the relationship name
 	 * @param entity the related entity
@@ -426,6 +474,8 @@ public class Entity implements Exportable, Snapshotable
 	 */
 	public void removeRelation(String relationship, Entity entity)
 	{
+		if( entity == null ) return;
+		
 		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
 		if( r == null ) throw new IllegalArgumentException("Invalid relationship name");
 		if( r.b.min() > 0 &&  r.b.min() >= r.a.size() ) throw new RuntimeException("Minimum number of relations reached");

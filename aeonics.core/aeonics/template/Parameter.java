@@ -66,7 +66,7 @@ public class Parameter implements Documented
 	/**
 	 * The parameter expected format
 	 */
-	private String format = "text";
+	private String format = Parameter.Format.TEXT;
 	/**
 	 * Returns the parameter expected format.
 	 * The parameter format is just an indication on how the parameter should be formatted and/or displayed to the user.

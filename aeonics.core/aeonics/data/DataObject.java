@@ -3,6 +3,7 @@ package aeonics.data;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import aeonics.util.Exportable;
 import aeonics.util.Internal;
@@ -42,6 +43,7 @@ public class DataObject implements Data
 	public Data remove(String key) { throw new RuntimeException("This element is not a container"); }
 	public Data remove(int index) { throw new RuntimeException("This element is not a container"); }
 	public Data remove(Data item) { throw new RuntimeException("This element is not a container"); }
+	public void removeIf(Predicate<Data> check) { throw new RuntimeException("This element is not a container"); }
 	
 	public Data add(Object value) { throw new RuntimeException("This element is not a container"); }
 	public Data put(String key, Object value) { throw new RuntimeException("This element is not a container"); }

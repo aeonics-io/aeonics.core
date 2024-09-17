@@ -1,6 +1,7 @@
 package aeonics.entity;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -68,7 +69,7 @@ import aeonics.util.StringUtils;
  *     .create(); // &lt;-- create an instance of the entity and register it in the registry
  * </pre>
  */
-public abstract class Database extends Item<Database.Type>
+public class Database extends Item<Database.Type>
 {
 	/** 
 	 * JDBC 4.3 Specification (JSR 221)
@@ -212,7 +213,7 @@ public abstract class Database extends Item<Database.Type>
 	 * pooled {@link Database.Type}.
 	 */
 	@SuppressWarnings("exports")
-	public class PooledConnection implements AutoCloseable
+	public static class PooledConnection implements AutoCloseable
 	{
 		/**
 		 * The connection pool
@@ -427,7 +428,33 @@ public abstract class Database extends Item<Database.Type>
 		/**
 		 * The inline connection supplier
 		 */
-		private Supplier<PooledConnection> connection = null;
+		private Supplier<PooledConnection> connection = () ->
+		{
+			try
+			{
+				Class.forName(valueOf("driver").asString());
+				String u = valueOf("username").asString();
+				String p = valueOf("password").asString();
+				
+				if( !u.isBlank() && !p.isBlank() )
+				{
+					return new PooledConnection(this, DriverManager.getConnection(valueOf("jdbc").asString()));
+				}
+				else
+				{
+					return new PooledConnection(this, DriverManager.getConnection(
+						valueOf("jdbc").asString(), 
+						valueOf("username").asString(), 
+						valueOf("password").asString()
+					));
+				}
+			}
+			catch(Exception e)
+			{
+				Manager.of(Logger.class).info(Database.class, e);
+			}
+			return null;
+		};
 		
 		/**
 		 * Sets the process function as an alternative to {@link #connection()}.
@@ -773,6 +800,26 @@ public abstract class Database extends Item<Database.Type>
 				.format(Parameter.Format.NUMBER)
 				.optional(true)
 				.defaultValue(1))
+			.add(new Parameter("jdbc")
+				.summary("JDBC connection string")
+				.description("The JDBC connection string to the database.")
+				.format(Parameter.Format.TEXT)
+				.optional(false))
+			.add(new Parameter("driver")
+				.summary("Driver")
+				.description("The full class name of the database driver.")
+				.format(Parameter.Format.TEXT)
+				.optional(false))
+			.add(new Parameter("username")
+				.summary("Username")
+				.description("The username to connect to the database.")
+				.format(Parameter.Format.TEXT)
+				.optional(true))
+			.add(new Parameter("password")
+				.summary("Password")
+				.description("The password to connect to the database.")
+				.format(Parameter.Format.PASSWORD)
+				.optional(true))
 			.onUpdate((data, instance) ->
 			{
 				if( data.containsKey("size") )

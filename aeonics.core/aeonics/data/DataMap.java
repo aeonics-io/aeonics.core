@@ -3,6 +3,7 @@ package aeonics.data;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import aeonics.util.Internal;
 import aeonics.util.Json;
@@ -47,6 +48,7 @@ public class DataMap implements Data
 	public Data remove(String key) { return source.remove(key); }
 	public Data remove(int index) { return this.remove("" + index); }
 	public Data remove(Data item) { source.values().remove(item); return item; }
+	public void removeIf(Predicate<Data> check) { this.source.values().removeIf(check); }
 	
 	public Data add(Object value) { return put("", value); }
 	public Data put(String key, Object value) { if( value instanceof Data ) source.put(key, (Data)value); else source.put(key, Data.of(value)); return this; }

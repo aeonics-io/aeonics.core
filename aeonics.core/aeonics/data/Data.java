@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import aeonics.util.Internal;
@@ -532,6 +533,13 @@ public interface Data extends Iterable<Data>
 	 * @throws RuntimeException if this data instance is not a map or a list
 	 */
 	public Data remove(Data item);
+	
+	/**
+	 * Removes the value if the value if this map or list matches the predicate.
+	 * @param check the comparison function
+	 * @throws RuntimeException if this data instance is not a map or a list
+	 */
+	public void removeIf(Predicate<Data> check);
 	
 	/**
 	 * Adds the provided value to this map or list.

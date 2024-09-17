@@ -3,18 +3,29 @@ package aeonics.entity;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.JDBCType;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import aeonics.data.Data;
+import aeonics.manager.Logger;
+import aeonics.manager.Manager;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
+import aeonics.template.Relationship;
 import aeonics.template.Template;
+import aeonics.util.Functions.BiConsumer;
 import aeonics.util.Json;
 import aeonics.util.StringUtils;
 
@@ -122,6 +133,8 @@ public abstract class Storage extends Item<Storage.Type>
 		 * By default, this method calls {@link #put(String, String)} with the <code>toString()</code> representation of the content.
 		 * @param path the full path
 		 * @param content the content to store
+		 * @throws IllegalArgumentException if the content or the path are incorrect or cannot be honored
+		 * @throws RuntimeException if a technical error happens
 		 */
 		public void put(String path, Data content) { put(path, content.toString()); }
 		
@@ -130,6 +143,8 @@ public abstract class Storage extends Item<Storage.Type>
 		 * By default, this method calls {@link #put(String, byte[])} with the <code>getBytes(StandardCharsets.UTF_8)</code> representation of the content.
 		 * @param path the full path
 		 * @param content the content to store
+		 * @throws IllegalArgumentException if the content or the path are incorrect or cannot be honored
+		 * @throws RuntimeException if a technical error happens
 		 */
 		public void put(String path, String content) { put(path, content.getBytes(StandardCharsets.UTF_8)); }
 		
@@ -137,6 +152,8 @@ public abstract class Storage extends Item<Storage.Type>
 		 * Store some content using the specified path name.
 		 * @param path the full path
 		 * @param content the content to store
+		 * @throws IllegalArgumentException if the content or the path are incorrect or cannot be honored
+		 * @throws RuntimeException if a technical error happens
 		 */
 		public abstract void put(String path, byte[] content);
 		
@@ -493,6 +510,531 @@ public abstract class Storage extends Item<Storage.Type>
 			return (Template<Memory.Type>) super.template()
 				.summary("Memory storage")
 				.description("This storage is non-persistent as it stores content directly in the heap memory of the application. However, it is the fastest to read and write data.");
+		}
+	}
+	
+	// =========================================
+	//
+	// DATABASE IMPLEMENTATION
+	//
+	// =========================================
+	
+	public static class Database extends Storage
+	{
+		// SECURITY NOTE : 
+		// This class is sql injection prone if the table or column name contains forged values.
+		//
+		// Although, those are pulled from the database itself using Database.schema().
+		// So we assume that the database implementation would not auto-inject itself.
+		
+		public static class Type extends Storage.Type
+		{
+			private BiConsumer<Data, Entity> updateHandler;
+			private BiConsumer<Void, Entity> removeHandler;
+			
+			public Type()
+			{
+				updateHandler = (Data data, Entity entity) ->
+				{
+					this.schema.set(null);
+				};
+				
+				removeHandler = (Void data, Entity entity) ->
+				{
+					this.schema.set(null);
+					entity.onUpdate().remove(updateHandler);
+					entity.onRemove().remove(removeHandler);
+					this.db.set(null);
+				};
+			}
+			
+			private Path path(String path)
+			{
+				return Path.of(normalize(path));
+			}
+			
+			private AtomicReference<Data> schema = new AtomicReference<>();
+			private Data schema()
+			{
+				Data s = schema.get();
+				if( s != null ) return s;
+				
+				synchronized(schema)
+				{
+					if( schema.get() == null )
+					{
+						try { schema.set(db().schema()); }
+						catch(Exception e) { throw new RuntimeException("Database schema unavailable", e); }
+					}
+				}
+				return schema.get();
+			}
+			
+			private AtomicReference<aeonics.entity.Database.Type> db = new AtomicReference<>();
+			private aeonics.entity.Database.Type db()
+			{
+				aeonics.entity.Database.Type db = firstRelation("database");
+				aeonics.entity.Database.Type cache = this.db.get();
+				if( db != cache )
+				{
+					if( cache != null )
+					{
+						cache.onRemove().remove(removeHandler);
+						cache.onUpdate().remove(updateHandler);
+					}
+					if( db != null )
+					{
+						db.onRemove().then(removeHandler);
+						db.onUpdate().then(updateHandler);
+					}
+					this.schema.set(null);
+					this.db.set(db);
+				}
+				if( db == null ) throw new IllegalStateException("Underlying database is not ready");
+				
+				return db;
+			}
+			
+			@Override
+			public void put(String path, Data content)
+			{
+				if( path == null || path.isBlank() ) throw new IllegalArgumentException("Invalid path " + path);
+				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
+				
+				Path p = path(path);
+				if( p.getNameCount() == 2 )
+				{
+					try
+					{
+						// add or update row
+						String table = p.getName(0).toString();
+						String id = p.getName(1).toString();
+						
+						for( Data t : schema() )
+						{
+							if( table.equalsIgnoreCase(t.asString("name")) )
+							{
+								if( containsEntry(path) )
+								{
+									// UPDATE
+									String sql = "UPDATE " + t.asString("name") + " SET ";
+									List<Object> params = new ArrayList<>();
+									String where = " WHERE ";
+									for( Data c : t.get("columns") )
+									{
+										if( c.asBool("primary") ) where += c.asString("name") + " = ?";
+										for( Map.Entry<String, Data> entry : content.entrySet() )
+										{
+											if( entry.getKey().equalsIgnoreCase(c.asString("name")) )
+											{
+												sql += c.asString("name") + " = ?,";
+												params.add(entry.getValue().asString());
+											}
+										}
+									}
+									if( params.size() == 0 ) return; // nothing to update
+									sql = sql.substring(0, sql.length() - 1);
+									params.add(id);
+									
+									db().query(sql + where, params.toArray());
+									return;
+								}
+								else
+								{
+									// INSERT
+									String sql = "INSERT INTO " + t.asString("name") + " ("; 
+									String values = ") VALUES (";
+									List<Object> params = new ArrayList<>();
+									boolean primarySet = false;
+									String primaryName = null;
+									for( Data c : t.get("columns") )
+									{
+										if( c.asBool("primary") ) primaryName = c.asString("name");
+										for( Map.Entry<String, Data> entry : content.entrySet() )
+										{
+											if( entry.getKey().equalsIgnoreCase(c.asString("name")) )
+											{
+												if( c.asBool("primary") ) primarySet = true;
+												
+												sql += c.asString("name") + ",";
+												values += "?,";
+												params.add(entry.getValue().asString());
+											}
+										}
+									}
+									if( params.size() == 0 && primarySet ) return; // nothing to insert
+									if( !primarySet )
+									{
+										sql += primaryName + ",";
+										values += "?,";
+										params.add(id);
+									}
+									sql = sql.substring(0, sql.length() - 1);
+									values = values.substring(0, values.length() - 1);
+									
+									db().query(sql + values + ")", params);
+									return;
+								}
+							}
+						}
+					}
+					catch(Exception e)
+					{
+						throw new RuntimeException(e); 
+					}
+				}
+				else if( p.getNameCount() == 1 )
+				{
+					// add table
+					String table = p.getName(0).toString();
+					if( !StringUtils.isComposedOf(table, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_") ) throw new IllegalArgumentException("Illegal table name " + table);
+					
+					if( !content.isList("columns") ) throw new IllegalArgumentException("Missing or invalid 'columns' definition");
+					
+					String sql = "CREATE TABLE " + table + " (";
+					String primary = "PRIMARY KEY (";
+					for( Data c : content.get("columns") )
+					{
+						if( !c.containsKey("name") ) throw new IllegalArgumentException("Missing column name");
+						if( !StringUtils.isComposedOf(c.asString("name"), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_") ) throw new IllegalArgumentException("Illegal column name " + c.asString("name"));
+						
+						sql += c.asString("name") + " ";
+						
+						JDBCType type = null;
+						if( c.containsKey("type") )
+							type = JDBCType.valueOf(c.asString("type"));
+						else
+							type = JDBCType.NVARCHAR;
+						
+						sql += type.getName();
+						
+						if( c.containsKey("size") )
+							sql += "(" + c.asInt("size") + ")";
+							
+						if( c.containsKey("null") && !c.asBool("null") )
+							sql += " NOT NULL";
+						
+						if( c.containsKey("primary") && c.asBool("primary") )
+							primary += c.asString("name") + "))";
+						
+						sql += ", ";
+					}
+					
+					try { db().query(sql + primary); }
+					catch(Exception e) { throw new RuntimeException(e); }
+				}
+				else
+					throw new IllegalArgumentException("Invalid path " + path);
+			}
+			
+			@Override
+			public void put(String path, String content) { put(path, Json.decode(content)); }
+			
+			public void put(String path, byte[] content) { put(path, Json.decode(new String(content, StandardCharsets.UTF_8))); }
+
+			@Override
+			public Data getData(String path)
+			{
+				if( path == null || path.isBlank() ) return null;
+				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
+				
+				Path p = path(path);
+				if( p.getNameCount() > 2 ) return null;
+				
+				// root = schema
+				if( p.getNameCount() == 0 ) return schema().clone();
+				
+				// table = definition
+				if( p.getNameCount() == 1 )
+				{
+					String table = p.getName(0).toString();
+					for( Data t : schema() )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							return t.clone();
+						}
+					}
+					return null;
+				}
+				
+				try
+				{
+					String table = p.getName(0).toString();
+					String id = p.getName(1).toString();
+					
+					for( Data t : schema() )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							for( Data c : t.get("columns") )
+							{
+								if( c.asBool("primary") )
+								{
+									Data rows = db().query("SELECT * FROM " + t.asString("name") + " WHERE " + c.asString("name") + " = ?", id);
+									if( rows.isEmpty() ) return null;
+									else return rows.get(0);
+								}
+							}
+						}
+					}
+					
+					return null;
+				}
+				catch(Exception e)
+				{
+					Manager.of(Logger.class).finer(Database.class, e);
+					return null;
+				}
+			}
+			
+			@Override
+			public String getString(String path)
+			{
+				Data data = getData(path);
+				if( data == null ) return null;
+				else return data.toString();
+			}
+
+			public byte[] get(String path)
+			{
+				Data data = getData(path);
+				if( data == null ) return null;
+				else return data.toString().getBytes(StandardCharsets.UTF_8);
+			}
+
+			public boolean containsEntry(String path)
+			{
+				if( path == null || path.isBlank() ) return false;
+				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
+				
+				Path p = path(path);
+				if( p.getNameCount() != 2 ) return false;
+				
+				try
+				{
+					String table = p.getName(0).toString();
+					String id = p.getName(1).toString();
+					
+					for( Data t : schema() )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							for( Data c : t.get("columns") )
+							{
+								if( c.asBool("primary") )
+								{
+									Data rows = db().query("SELECT " + c.asString("name") + " FROM " + t.asString("name") + " WHERE " + c.asString("name") + " = ?", id);
+									return rows.size() == 1;
+								}
+							}
+						}
+					}
+					
+					return false;
+				}
+				catch(Exception e)
+				{
+					Manager.of(Logger.class).finer(Database.class, e);
+					return false;
+				}
+			}
+
+			public boolean containsPath(String path)
+			{
+				if( path == null ) return false;
+				if( path.isBlank() ) return true;
+				
+				Path p = path(path);
+				if( p.getNameCount() == 0 ) return true;
+				if( p.getNameCount() != 1 ) return false;
+				
+				try
+				{
+					String table = p.getName(0).toString();
+					
+					for( Data t : schema() )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							return true;
+						}
+					}
+					
+					return false;
+				}
+				catch(Exception e)
+				{
+					Manager.of(Logger.class).finer(Database.class, e);
+					return false;
+				}
+			}
+
+			public void remove(String path)
+			{
+				if( path == null ) return;
+				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
+				
+				if( path.isBlank() ) { clear(); return; }
+				Path p = path(path);
+				if( p.getNameCount() == 0 ) { clear(); return; }
+				if( p.getNameCount() > 2 ) return;
+				
+				try
+				{
+					String table = p.getName(0).toString();
+					String id = p.getNameCount() == 2 ? p.getName(1).toString() : null;
+					
+					for( Data t : schema() )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							if( id == null )
+							{
+								db().query("TRUNCATE TABLE " + t.asString("name"));
+								return;
+							}
+							
+							for( Data c : t.get("columns") )
+							{
+								if( c.asBool("primary") )
+								{
+									db().query("DELETE FROM " + t.asString("name") + " WHERE " + c.asString("name") + " = ?", id);
+									return;
+								}
+							}
+						}
+					}
+				}
+				catch(Exception e)
+				{
+					Manager.of(Logger.class).finer(Database.class, e);
+				}
+			}
+
+			public Collection<String> list(String path)
+			{
+				if( path == null || path.isBlank() ) return Collections.emptyList();
+				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
+				
+				Path p = path(path);
+				if( p.getNameCount() >= 2 ) return Collections.emptyList();
+				else if( p.getNameCount() == 1 )
+				{
+					String table = p.getName(0).toString() + "/";
+					return tree(path).stream().map(id -> table.concat(id)).collect(Collectors.toList());
+				}
+				else if( p.getNameCount() == 0 )
+				{
+					int limit = valueOf("maxRecords").asInt();
+					List<String> all = new ArrayList<>();
+					for( Data t : schema() )
+					{
+						String table = t.asString("name") + "/";
+						all.addAll(
+							tree(table).stream().map(id -> table.concat(id)).collect(Collectors.toList())
+						);
+						if( all.size() >= limit ) return all;
+					}
+					return all;
+				}
+				else if( p.getNameCount() == 2 && containsEntry(path) )
+					return Arrays.asList(path);
+				
+				return Collections.emptyList();
+			}
+
+			public Collection<String> tree(String path)
+			{
+				if( path == null || path.isBlank() ) return Collections.emptyList();
+				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
+				
+				Path p = path(path);
+				if( p.getNameCount() >= 2 ) return Collections.emptyList();
+				
+				List<String> list = new ArrayList<>();
+				if( p.getNameCount() == 0 )
+				{
+					for( Data t : schema() )
+						list.add(t.asString("name") + "/");
+					return list;
+				}
+				else if( p.getNameCount() == 1 )
+				{
+					String table = p.getName(0).toString();
+					for( Data t : schema() )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							String primary = null;
+							for( Data c : t.get("columns") )
+								if( c.asBool("primary") )
+									primary = c.asString("name");
+							if( primary == null )
+								return Collections.emptyList();
+							
+							String sql = "SELECT " + primary + " FROM " + t.asString("name") + " ORDER BY " + primary + " ASC";
+							
+							int limit = valueOf("maxRecords").asInt();
+							if( limit > 0 )
+								sql += " OFFSET 0 ROWS FETCH FIRST " + limit + " ROWS";
+							
+							try
+							{
+								Data rows = db().query(sql); 
+							
+								for( Data row : rows )
+									list.add(row.asString(primary));
+								return list;
+							}
+							catch(Exception e) { throw new RuntimeException(e); }
+						}
+					}
+				}
+				
+				return Collections.emptyList();
+			}
+
+			public void clear()
+			{
+				try
+				{
+					for( Data t : schema() )
+						db().query("DROP TABLE " + t.asString("name"));
+				}
+				catch(Exception e)
+				{
+					Manager.of(Logger.class).finer(Database.class, e);
+				}
+			}
+		}
+		
+		protected Class<? extends Database.Type> defaultTarget() { return Database.Type.class; }
+		protected Supplier<? extends Database.Type> defaultCreator() { return Database.Type::new; }
+		
+		@SuppressWarnings("unchecked")
+		@Override
+		public Template<? extends Database.Type> template()
+		{
+			return (Template<Database.Type>) super.template()
+				.summary("Database storage")
+				.description("This storage uses a database connection to store data. Therefore, the path structure is limited and must always start with the table name and "
+					+ "then the primary key of the record of interest. This also implies that this storage is only compatible with tables that define one simple primary key "
+					+ "(no composite primary key is supported). In order to improve performance, this storage keeps a cache of the database schema. This cache is "
+					+ "populated at first use and refreshed whenever the underlying database entity is updated.")
+				.add(new Relationship("database")
+					.category(Database.class)
+					.summary("Database")
+					.description("The target underlying database")
+					.min(1).max(1))
+				.add(new Parameter("maxRecords")
+					.summary("Maximum record count")
+					.description("When listing the content of the storage, a database may have a large number of rows. This parameter limits the number of returned "
+						+ "elements. The elements are always sorted in ascending order. Setting this parameter to 0 or a negative value means unlimited.")
+					.format(Parameter.Format.NUMBER)
+					.rule(Parameter.Rule.INTEGER)
+					.defaultValue(-1)
+					.optional(true));
 		}
 	}
 }

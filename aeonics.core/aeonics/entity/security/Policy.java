@@ -102,12 +102,9 @@ public abstract class Policy extends Item<Policy.Type>
 				
 				try
 				{
-					for( Tuple<Entity, Data> rules : relations("rule") )
-					{
-						Rule.Type rule = rules.a.cast();
-						if( rule != null )
-							return rule.test(user, context);
-					}
+					Rule.Type rule = firstRelation("rule");
+					if( rule != null )
+						return rule.test(user, context);
 				}
 				catch(Exception e)
 				{

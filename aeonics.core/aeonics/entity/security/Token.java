@@ -96,7 +96,7 @@ public class Token implements Exportable
 	 */
 	public Token(Data data)
 	{
-		if( data == null || !data.isMap() ) throw new IllegalArgumentException();
+		if( data == null || !data.isMap() ) throw new IllegalArgumentException("Invalid token data: " + data);
 		
 		this.user = data.asString("user");
 		if( user.equals(User.ANONYMOUS.id()) || user.equals(User.SYSTEM.id()) ) throw new IllegalArgumentException("Invalid user");

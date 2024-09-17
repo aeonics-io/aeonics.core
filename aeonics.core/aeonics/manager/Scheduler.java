@@ -125,7 +125,12 @@ public abstract class Scheduler extends Manager.Type
 				String rr = rule();
 				Consumer<ZonedDateTime> t = task();
 				ZonedDateTime from = start();
-				if( rr == null || t == null || from == null ) return;
+				if( rr == null || t == null || from == null || rr.isBlank() )
+				{
+					next = null;
+					iterator = null;
+					return;
+				}
 				
 				synchronized(this)
 				{
@@ -298,6 +303,8 @@ public abstract class Scheduler extends Manager.Type
 	@Internal
 	private static class RRULE
 	{
+		// TODO : support negative BYMONTHDAY that indicate the number of days starting from the end of the month.
+		
 		private enum Part
 		{ 
 			FREQ("FREQ"), UNTIL("UNTIL"), COUNT("COUNT"), INTERVAL("INTERVAL"), BYSECOND("BYSECOND"), BYMINUTE("BYMINUTE"), BYHOUR("BYHOUR"), 
@@ -451,7 +458,7 @@ public abstract class Scheduler extends Manager.Type
 					break;
 			}
 			
-			if( Boolean.TRUE.equals(allowsMultipleValues.get(Part.valueOf(key))) )
+			if( !Boolean.TRUE.equals(allowsMultipleValues.get(Part.valueOf(key))) )
 			{
 				if( values.size() > 1 ) throw new IllegalArgumentException(key + " accepts only one value");
 				definition.put(key, values.get(0));

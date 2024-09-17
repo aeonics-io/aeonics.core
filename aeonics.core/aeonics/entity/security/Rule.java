@@ -76,8 +76,9 @@ public abstract class Rule extends Item<Rule.Type>
 		{
 			public boolean test(User.Type user, Data data)
 			{
-				for( Tuple<Entity, Data> rule : relations("rule") )
-					return !((Rule.Type)rule.a).test(user, data);
+				Rule.Type rule = firstRelation("rule");
+				if( rule != null )
+					return !rule.test(user, data);
 				return true;
 			}
 		}

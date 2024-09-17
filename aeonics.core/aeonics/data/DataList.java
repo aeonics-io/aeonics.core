@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import aeonics.util.Internal;
 
@@ -99,6 +100,7 @@ public class DataList implements Data
 	public Data remove(String key) { return this.remove(Integer.parseInt(key)); }
 	public Data remove(int index) { return source.remove(index); }
 	public Data remove(Data item) { int index = this.source.indexOf(item); if( index >= 0 ) return source.remove(index); return null; }
+	public void removeIf(Predicate<Data> check) { this.source.removeIf(check); }
 	
 	public Data add(Object value) { if( value instanceof Data ) source.add((Data)value); else source.add(Data.of(value)); return this; }
 	public Data put(String key, Object value) { return set(Integer.parseInt(key), value); }
