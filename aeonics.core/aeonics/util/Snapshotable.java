@@ -13,8 +13,8 @@ import aeonics.template.Template;
  * <p>The intent of this interface is to backup an {@link Entity} to stale data and be able to restore it later.
  * To that extent, it is undoubtedly a form of serialization into a human-readable format.</p>
  * 
- * <p>Undernormal circumstances, the shapshot and restore behavior should be orchestrated by the {@link Snapshot} manager.
- * The restore mechanism shall reuse the {@link Factory#create(Data)} method. This means that the shapshot data must
+ * <p>Undernormal circumstances, the snapshot and restore behavior should be orchestrated by the {@link Snapshot} manager.
+ * The restore mechanism shall reuse the {@link Factory#create(Data)} method. This means that the snapshot data must
  * comply with the {@link Template#create(Data)} entity creation mechanism.</p>
  * 
  * <p>You <b>may</b> include private data in the snapshot form as it is not intended to be visible by the user.

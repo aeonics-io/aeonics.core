@@ -44,6 +44,7 @@ public abstract class Scheduler extends Manager.Type
 			/**
 			 * Cron tasks are internal by default
 			 */
+			@Override
 			public boolean internal() { return true; }
 			
 			/**
@@ -702,7 +703,7 @@ public abstract class Scheduler extends Manager.Type
 						}
 					}
 					
-					while( hasNext() && next.isBefore(from) )
+					while( hasNext() && !next.isAfter(from) )
 						next();
 				}
 				

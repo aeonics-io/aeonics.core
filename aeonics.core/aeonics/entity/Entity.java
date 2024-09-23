@@ -266,16 +266,18 @@ public class Entity implements Exportable, Snapshotable
 	 * @throws IllegalArgumentException if the provided value does not pass parameter validation
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends Entity> T parameter(String parameter, Data value)
+	public <T extends Entity> T parameter(String parameter, Object value)
 	{
+		Data data = Data.of(value);
+		
 		Tuple<Data, Parameter> t = parameters().get(parameter);
 		if( t == null )
 		{
-			t = Tuple.of(value, new Parameter(parameter));
+			t = Tuple.of(data, new Parameter(parameter));
 			parameters().put(parameter, t);
 		}
-		if( t.b.validate(value) )
-			t.a = value;
+		if( t.b.validate(data) )
+			t.a = data;
 		else
 			throw new IllegalArgumentException("Parameter validation failed");
 		

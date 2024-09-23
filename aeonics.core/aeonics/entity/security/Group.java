@@ -17,6 +17,11 @@ import aeonics.util.StringUtils;
  */
 public class Group extends Item<Group.Type>
 {
+	public static final Group.Type ADMINISTRATORS = new Group().template().create(Data.map().put("id", "10000000-1800000000000000"))
+		.name("Administrators").internal(true).addRelation("roles", Role.SUPERADMIN).cast();
+	public static final Group.Type USERS = new Group().template().create(Data.map().put("id", "10000000-1900000000000000"))
+		.name("Users").internal(true);
+	
 	/**
 	 * Superclass for all group entities.
 	 */
