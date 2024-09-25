@@ -147,6 +147,8 @@ public class User extends Item<User.Type>
 	public Template<? extends User.Type> template()
 	{
 		return super.template()
+			.summary("User")
+			.description("Users represents a login to the system and can be linked to groups and roles. Users can only login if they are supported by a security provider.")
 			.add(new Parameter("active")
 				.summary("Active")
 				.description("Whether or not this user is active")

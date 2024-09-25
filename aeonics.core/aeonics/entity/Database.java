@@ -438,15 +438,15 @@ public class Database extends Item<Database.Type>
 				
 				if( !u.isBlank() && !p.isBlank() )
 				{
-					return new PooledConnection(this, DriverManager.getConnection(valueOf("jdbc").asString()));
-				}
-				else
-				{
 					return new PooledConnection(this, DriverManager.getConnection(
 						valueOf("jdbc").asString(), 
 						valueOf("username").asString(), 
 						valueOf("password").asString()
 					));
+				}
+				else
+				{
+					return new PooledConnection(this, DriverManager.getConnection(valueOf("jdbc").asString()));
 				}
 			}
 			catch(Exception e)
@@ -598,6 +598,8 @@ public class Database extends Item<Database.Type>
 				c = idle.poll();
 				if( c == null )
 					c = connection();
+				if( c == null )
+					throw new SQLException("No connection available");
 			}
 			catch(Exception e)
 			{
@@ -793,6 +795,8 @@ public class Database extends Item<Database.Type>
 	public Template<? extends Database.Type> template()
 	{
 		return super.template()
+			.summary("SQL Database")
+			.description("This entity type provides database connectivity through standard JDBC connections using an internal connection pool.")
 			.add(new Parameter("size")
 				.summary("Maximum number of connections")
 				.description("The maximum number of simultaneous connections to the database. Connections will only be established on-demand up to this limit.")
