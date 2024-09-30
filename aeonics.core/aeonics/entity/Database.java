@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -663,6 +664,24 @@ public class Database extends Item<Database.Type>
 			if( active.remove(connection) )
 				permits.release();
 			try { connection.destroy(); } catch(Exception e) { /* silent */ }
+		}
+		
+		/**
+		 * Performs a query on this database, waiting indefinitely for a connection to be available from the pool.
+		 * 
+		 * <p>The parameters provided for substitution will be provided to the underlying connection using 
+		 * {@link java.sql.PreparedStatement#setObject(int, Object)} so that the compatibility with String values is maximized.
+		 * (see <i>JDBC 4.3 Specification (JSR 221) Table B.5</i> for Conversions Performed by setObject and setNull Between 
+		 * Java Object Types and Target JDBC Types)</p>
+		 * 
+		 * @param sql the sql parameterized query
+		 * @param params the parameters of the query
+		 * @return the result as a list of map with column names in lower case
+		 * @throws SQLException if an error happens
+		 */
+		public Data query(String sql, Collection<Object> params) throws SQLException
+		{
+			return query(-1, sql, params.toArray());
 		}
 		
 		/**

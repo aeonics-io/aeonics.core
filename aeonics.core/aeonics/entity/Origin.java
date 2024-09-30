@@ -425,7 +425,7 @@ public abstract class Origin extends Item<Origin.Type>
 						.template()
 						.create()
 						.task((time) -> { ((Origin.Scheduled.Type)instance).runTask(time); })
-						.start(ZonedDateTime.now())
+						.start(ZonedDateTime.now().withNano(0))
 						.rule(data.asString("rule"));
 						
 					if( Manager.of(Lifecycle.class).phase() == Lifecycle.Phase.RUN )

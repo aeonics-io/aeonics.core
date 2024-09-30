@@ -567,6 +567,7 @@ public abstract class Storage extends Item<Storage.Type>
 						catch(Exception e) { throw new RuntimeException("Database schema unavailable", e); }
 					}
 				}
+				
 				return schema.get();
 			}
 			
@@ -602,12 +603,42 @@ public abstract class Storage extends Item<Storage.Type>
 				if( path.endsWith(".json") ) path = path.substring(0, path.length()-5);
 				
 				Path p = path(path);
-				if( p.getNameCount() == 2 )
+				if( p.getNameCount() == 2 || (p.getNameCount() == 1 && path.endsWith("/")) )
 				{
 					try
 					{
 						// add or update row
 						String table = p.getName(0).toString();
+						
+						// the path was ending with '/' so we append the id from the data itself
+						if( p.getNameCount() == 1 )
+						{
+							String tmp = p.getName(0).toString();
+							boolean fixed = false;
+							for( Data t : schema() )
+							{
+								if( tmp.equalsIgnoreCase(t.asString("name")) )
+								{
+									for( Data c : t.get("columns") )
+									{
+										if( c.asBool("primary") )
+										{
+											for( Map.Entry<String, Data> entry : content.entrySet() )
+											{
+												if( entry.getKey().equalsIgnoreCase(c.asString("name")) )
+												{
+													path += entry.getValue().asString();
+													p = path(path);
+													fixed = true;
+												}
+											}
+										}
+									}
+								}
+							}
+							if( !fixed ) throw new RuntimeException("Could not infer record primary key");
+						}
+						
 						String id = p.getName(1).toString();
 						
 						for( Data t : schema() )
@@ -636,7 +667,7 @@ public abstract class Storage extends Item<Storage.Type>
 									sql = sql.substring(0, sql.length() - 1);
 									params.add(id);
 									
-									db().query(sql + where, params.toArray());
+									db().query(sql + where, params);
 									return;
 								}
 								else
@@ -742,7 +773,7 @@ public abstract class Storage extends Item<Storage.Type>
 				if( p.getNameCount() > 2 ) return null;
 				
 				// root = schema
-				if( p.getNameCount() == 0 ) return schema().clone();
+				if( p.getNameCount() == 0 || p.equals(Path.of("")) ) return schema().clone();
 				
 				// table = definition
 				if( p.getNameCount() == 1 )
@@ -846,7 +877,7 @@ public abstract class Storage extends Item<Storage.Type>
 				if( path.isBlank() ) return true;
 				
 				Path p = path(path);
-				if( p.getNameCount() == 0 ) return true;
+				if( p.getNameCount() == 0 || p.equals(Path.of("")) ) return true;
 				if( p.getNameCount() != 1 ) return false;
 				
 				try
@@ -877,7 +908,7 @@ public abstract class Storage extends Item<Storage.Type>
 				
 				if( path.isBlank() ) { clear(); return; }
 				Path p = path(path);
-				if( p.getNameCount() == 0 ) { clear(); return; }
+				if( p.getNameCount() == 0 || p.equals(Path.of("")) ) { clear(); return; }
 				if( p.getNameCount() > 2 ) return;
 				
 				try
@@ -919,12 +950,7 @@ public abstract class Storage extends Item<Storage.Type>
 				
 				Path p = path(path);
 				if( p.getNameCount() >= 2 ) return Collections.emptyList();
-				else if( p.getNameCount() == 1 )
-				{
-					String table = p.getName(0).toString() + "/";
-					return tree(path).stream().map(id -> table.concat(id)).collect(Collectors.toList());
-				}
-				else if( p.getNameCount() == 0 )
+				else if( p.getNameCount() == 0 || p.equals(Path.of("")) )
 				{
 					int limit = valueOf("maxRecords").asInt();
 					List<String> all = new ArrayList<>();
@@ -937,6 +963,11 @@ public abstract class Storage extends Item<Storage.Type>
 						if( all.size() >= limit ) return all;
 					}
 					return all;
+				}
+				else if( p.getNameCount() == 1 )
+				{
+					String table = p.getName(0).toString() + "/";
+					return tree(path).stream().map(id -> table.concat(id)).collect(Collectors.toList());
 				}
 				else if( p.getNameCount() == 2 && containsEntry(path) )
 					return Arrays.asList(path);
@@ -951,9 +982,9 @@ public abstract class Storage extends Item<Storage.Type>
 				
 				Path p = path(path);
 				if( p.getNameCount() >= 2 ) return Collections.emptyList();
-				
+		
 				List<String> list = new ArrayList<>();
-				if( p.getNameCount() == 0 )
+				if( p.getNameCount() == 0 || p.equals(Path.of("")) )
 				{
 					for( Data t : schema() )
 						list.add(t.asString("name") + "/");
@@ -1023,7 +1054,7 @@ public abstract class Storage extends Item<Storage.Type>
 					+ "(no composite primary key is supported). In order to improve performance, this storage keeps a cache of the database schema. This cache is "
 					+ "populated at first use and refreshed whenever the underlying database entity is updated.")
 				.add(new Relationship("database")
-					.category(Database.class)
+					.category(aeonics.entity.Database.class)
 					.summary("Database")
 					.description("The target underlying database")
 					.min(1).max(1))

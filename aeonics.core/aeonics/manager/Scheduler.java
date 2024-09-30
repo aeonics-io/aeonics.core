@@ -25,6 +25,7 @@ import aeonics.util.StringUtils;
 
 /**
  * Manages execution of scheduled tasks. The scheduler will inspect the {@link Registry} for all {@link Cron} and will run them accordingly.
+ * <p>It is not expected that the scheduler have a precision smaller than 1 second.</p>
  */
 public abstract class Scheduler extends Manager.Type
 {
@@ -138,7 +139,7 @@ public abstract class Scheduler extends Manager.Type
 					if( rr.isBlank() ) return;
 					
 					RRULE rrule = new RRULE(rule(), start());
-					ZonedDateTime now = ZonedDateTime.now().plusSeconds(rrule.freq == RRULE.Freq.SECONDLY ? 0 : 5);
+					ZonedDateTime now = ZonedDateTime.now().withNano(0).plusSeconds(rrule.freq == RRULE.Freq.SECONDLY ? 0 : 5);
 					iterator = rrule.iterator(from.isAfter(now) ? from : now);
 					next = iterator.next();
 				}
@@ -156,7 +157,7 @@ public abstract class Scheduler extends Manager.Type
 				if( iterator == null ) return null;
 				if( future )
 				{
-					ZonedDateTime now = ZonedDateTime.now();
+					ZonedDateTime now = ZonedDateTime.now().withNano(0);
 					do { next = iterator.next(); }
 					while( next != null && next.isBefore(now) );
 				}
@@ -194,7 +195,7 @@ public abstract class Scheduler extends Manager.Type
 	 */
 	public void in(Consumer<ZonedDateTime> task, long delay)
 	{
-		at(task, ZonedDateTime.now().plus(delay, ChronoUnit.MILLIS));
+		at(task, ZonedDateTime.now().withNano(0).plus(delay, ChronoUnit.MILLIS));
 	}
 	
 	/**
@@ -206,7 +207,7 @@ public abstract class Scheduler extends Manager.Type
 	 */
 	public Scheduler.Cron.Type every(Consumer<ZonedDateTime> task, long step, final ChronoUnit unit)
 	{
-		return every(task, step, unit, ZonedDateTime.now());
+		return every(task, step, unit, ZonedDateTime.now().withNano(0));
 	}
 	
 	/**
@@ -279,10 +280,10 @@ public abstract class Scheduler extends Manager.Type
 		Scheduler.Cron.Type c = new Scheduler.Cron() {}
 			.template()
 			.summary("Runs a task at regular interval")
-			.description("This task runs every " + step + " " + unit.toString() + " starting from " + (from == null ? ZonedDateTime.now() : from))
+			.description("This task runs every " + step + " " + unit.toString() + " starting from " + (from == null ? ZonedDateTime.now().withNano(0) : from))
 			.create()
 			.task(task)
-			.start(from == null ? ZonedDateTime.now() : from)
+			.start(from == null ? ZonedDateTime.now().withNano(0) : from)
 			.rule(rrule);
 		
 		refresh();
@@ -302,7 +303,7 @@ public abstract class Scheduler extends Manager.Type
 	 * @hidden
 	 */
 	@Internal
-	private static class RRULE
+	public static class RRULE
 	{
 		// TODO : support negative BYMONTHDAY that indicate the number of days starting from the end of the month.
 		
@@ -703,7 +704,7 @@ public abstract class Scheduler extends Manager.Type
 						}
 					}
 					
-					while( hasNext() && !next.isAfter(from) )
+					while( hasNext() && (next.isBefore(from) || next.isEqual(from)) )
 						next();
 				}
 				
