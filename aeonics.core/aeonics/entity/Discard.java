@@ -18,6 +18,11 @@ public class Discard
 {
 	private Discard() { /* no instances */ }
 	
+	public static void register()
+	{
+		// calling this method will force initialization of all private static members
+	}
+	
 	/**
 	 * The discard cause
 	 */
@@ -51,6 +56,7 @@ public class Discard
 		public void emit(Message message, String channel)
 		{
 			if( message == null ) return;
+			if( !started() ) start();
 			
 			// if the message was already discarded or is debug, ignore
 			if( message.metadata().asBool("discarded") || message.metadata().asBool("debug") ) return;

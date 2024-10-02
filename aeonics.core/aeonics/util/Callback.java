@@ -129,6 +129,14 @@ public class Callback<V, T> implements Iterable<BiConsumer<V, T>>
 	}
 	
 	/**
+	 * Removes all handlers from this callback.
+	 */
+	public void clear()
+	{
+		this.handlers.clear();
+	}
+	
+	/**
 	 * Triggers the handlers with a null value
 	 */
 	public void trigger() { trigger(null); }

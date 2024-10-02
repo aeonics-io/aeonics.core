@@ -16,12 +16,18 @@ public class Debug
 {
 	private Debug() { /* no instances */ }
 	
+	public static void register()
+	{
+		// calling this method will force initialization of all private static members
+	}
+	
 	private static final class _Debug extends Origin.Basic.Type
 	{
 		@Override
 		public void emit(Message message, String channel)
 		{
 			if( message == null ) return;
+			if( !started() ) start();
 			
 			// if the message was already discarded or is debug, ignore
 			if( message.metadata().asBool("discarded") || message.metadata().asBool("debug") ) return;
@@ -70,6 +76,8 @@ public class Debug
 		return Data.of(Arrays.stream(new Exception().fillInStackTrace().getStackTrace())
 			.filter((e) ->
 			{
+				if( e.getClassName().equals(Debug.class.getName()) ) return false;
+				
 				return (level <= Logger.ALL || ((e.getModuleName() == null || !e.getModuleName().startsWith("java.")) 
 					|| !e.getClassName().startsWith("java.") 
 					|| !e.getClassName().startsWith("javax.") 

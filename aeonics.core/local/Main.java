@@ -11,6 +11,8 @@ import aeonics.Boot;
 import aeonics.Plugin;
 import aeonics.Protocols;
 import aeonics.entity.Database;
+import aeonics.entity.Debug;
+import aeonics.entity.Discard;
 import aeonics.entity.Origin;
 import aeonics.entity.Probe;
 import aeonics.entity.Queue;
@@ -85,6 +87,7 @@ public class Main extends Plugin
 		
 		Lifecycle.before(Phase.LOAD, this::onBeforeLoad);
 		Lifecycle.on(Phase.LOAD, this::onLoad);
+		Lifecycle.on(Phase.CONFIG, this::onConfig);
 		
 		Boot.spark(() ->
 		{
@@ -162,5 +165,11 @@ public class Main extends Plugin
 			.rule(Parameter.Rule.JSON_LIST)
 			.defaultValue("[TLSv1.3,TLSv1.2]")
 			);
+	}
+	
+	public void onConfig()
+	{
+		Debug.register();
+		Discard.register();
 	}
 }
