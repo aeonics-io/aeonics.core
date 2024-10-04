@@ -8,6 +8,7 @@ import java.util.function.Predicate;
 
 import aeonics.util.Internal;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -69,6 +70,34 @@ public class DataList implements Data
 			source.add(Data.of(list[i]));
 	}
 	
+	public static DataList fromPrimitiveArray(Object array)
+	{
+		if( array == null || !array.getClass().isArray() || !array.getClass().getComponentType().isPrimitive() )
+			return new DataList((Collection<Object>)null);
+		
+		ArrayList<Object> list = new ArrayList<>();
+		Class<?> type = array.getClass().getComponentType();
+		
+		if( type == byte.class )
+			for( byte i : ((byte[])array) ) list.add(i);
+		else if( type == short.class )
+			for( short i : ((short[])array) ) list.add(i);
+		else if( type == int.class )
+			for( int i : ((int[])array) ) list.add(i);
+		else if( type == long.class )
+			for( long i : ((long[])array) ) list.add(i);
+		else if( type == float.class )
+			for( float i : ((float[])array) ) list.add(i);
+		else if( type == double.class )
+			for( double i : ((double[])array) ) list.add(i);
+		else if( type == char.class )
+			for( char i : ((char[])array) ) list.add(i);
+		else if( type == boolean.class )
+			for( boolean i : ((boolean[])array) ) list.add(i);
+		
+		return new DataList(list);
+	}
+	
 	public Iterator<Data> iterator() { return source.iterator(); }
 	public Iterable<Map.Entry<String, Data>> entrySet() { return Collections.emptySet(); }
 	
@@ -103,6 +132,7 @@ public class DataList implements Data
 	public void removeIf(Predicate<Data> check) { this.source.removeIf(check); }
 	
 	public Data add(Object value) { if( value instanceof Data ) source.add((Data)value); else source.add(Data.of(value)); return this; }
+	public Data add(Object ...value) { for( Object o : value ) add(o); return this; }
 	public Data put(String key, Object value) { return set(Integer.parseInt(key), value); }
 	public Data set(int index, Object value) { if( value instanceof Data ) source.set(index, (Data)value); else source.set(index, Data.of(value)); return this; }
 	public Data set(Object value) { return add(value); }

@@ -51,6 +51,16 @@ public class DataMap implements Data
 	public void removeIf(Predicate<Data> check) { this.source.values().removeIf(check); }
 	
 	public Data add(Object value) { return put("", value); }
+	public Data add(Object ...value)
+	{
+		for( int i = 0; i < value.length; i++ )
+		{
+			String key = "" + value[i];
+			i++;
+			put(key, i < value.length ? value[i] : null);
+		}
+		return this;
+	}
 	public Data put(String key, Object value) { if( value instanceof Data ) source.put(key, (Data)value); else source.put(key, Data.of(value)); return this; }
 	public Data set(int index, Object value) { return put("" + index, value); }
 	public Data set(Object value) { return put("", value); }

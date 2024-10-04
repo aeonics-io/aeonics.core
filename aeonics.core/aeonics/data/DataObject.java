@@ -46,6 +46,7 @@ public class DataObject implements Data
 	public void removeIf(Predicate<Data> check) { throw new RuntimeException("This element is not a container"); }
 	
 	public Data add(Object value) { throw new RuntimeException("This element is not a container"); }
+	public Data add(Object ...value) { throw new RuntimeException("This element is not a container"); }
 	public Data put(String key, Object value) { throw new RuntimeException("This element is not a container"); }
 	public Data set(int index, Object value) { throw new RuntimeException("This element is not a container"); }
 	public Data set(Object value) { if( value instanceof Data ) source = ((Data)value).get(); else source = value; return this; }

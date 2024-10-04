@@ -1,5 +1,6 @@
 package aeonics.data;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -36,6 +37,10 @@ public interface Data extends Iterable<Data>
 			return (Data) item;
 		if( item instanceof Throwable )
 			return new DataObject(item);
+		if( item instanceof byte[] )
+			return new DataObject(new String((byte[])item, StandardCharsets.ISO_8859_1));
+		if( item instanceof char[] )
+			return new DataObject(new String((char[])item));
 		if( item instanceof Map )
 			return new DataMap((Map<?,?>)item);
 		if( item instanceof Collection )
@@ -48,8 +53,13 @@ public interface Data extends Iterable<Data>
 			return new DataList((Iterable<?>)item);
 		if( item instanceof Iterator )
 			return new DataList((Iterator<?>)item);
-		if( item != null && item.getClass().isArray() && !item.getClass().getComponentType().isPrimitive() )
-			return new DataList((Object[])item);
+		if( item != null && item.getClass().isArray() )
+		{
+			if( item.getClass().getComponentType().isPrimitive() )
+				return DataList.fromPrimitiveArray(item);
+			else
+				return new DataList((Object[])item);
+		}
 		return new DataObject(item);
 	}
 	
@@ -70,6 +80,12 @@ public interface Data extends Iterable<Data>
 	 * @return an empty data list 
 	 */
 	public static Data list() { return new DataList((Collection<?>)null); }
+	
+	/**
+	 * Returns a data list from the specified elements 
+	 * @return a data list from the specified elements 
+	 */
+	public static Data list(Object ...elements) { return new DataList(elements); }
 	
 	// ==========================
 	// ITERABLE METHODS
@@ -549,6 +565,15 @@ public interface Data extends Iterable<Data>
 	 * @throws RuntimeException if this data instance is not a map or a list
 	 */
 	public Data add(Object value);
+	
+	/**
+	 * Adds the provided values to this map or list.
+	 * If this data instance is a map, every even value is the key and odd the value.
+	 * @param value the value to add
+	 * @return <b>this</b> for chaining
+	 * @throws RuntimeException if this data instance is not a map or a list
+	 */
+	public Data add(Object ...value);
 	
 	/**
 	 * Adds the provided value to this map or list.
