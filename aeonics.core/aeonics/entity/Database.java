@@ -799,6 +799,14 @@ public class Database extends Item<Database.Type>
 			}
 		}
 		
+		public Data export()
+		{
+			// hide the password from the export
+			Data x = super.export();
+			x.get("parameters").remove("password");
+			return x;
+		}
+		
 		/**
 		 * Hardcoded category to the {@link Database} class
 		 */

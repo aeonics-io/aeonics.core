@@ -520,14 +520,16 @@ public abstract class Scheduler extends Manager.Type
 		
 		public Iterator<ZonedDateTime> iterator(ZonedDateTime from1)
 		{
-			if( freq == Freq.MONTHLY )
+			from1 = from1.withZoneSameInstant(referenceStart.getZone());
+			
+			if( freq == Freq.MONTHLY && !definition.containsKey("BYDAY") && !definition.containsKey("BYMONTHDAY") )
 			{
 				if( referenceStart.getDayOfMonth() > from1.getMonth().length(from1.toLocalDate().isLeapYear()) )
 					from1 = from1.withDayOfMonth(from1.getMonth().length(from1.toLocalDate().isLeapYear()));
 				else
 					from1 = from1.withDayOfMonth(referenceStart.getDayOfMonth());
 			}
-			else if( freq == Freq.WEEKLY )
+			else if( freq == Freq.WEEKLY && !definition.containsKey("BYDAY") )
 			{
 				if( !from1.getDayOfWeek().equals(referenceStart.getDayOfWeek()) )
 				{
@@ -551,8 +553,9 @@ public abstract class Scheduler extends Manager.Type
 					// fallthrough
 				case SECONDLY: from1 = from1.withNano(0);
 			}
-			final ZonedDateTime from = from1;
 			
+			final ZonedDateTime from = from1;
+
 			return new Iterator<ZonedDateTime>()
 			{
 				private int counter = 0;
@@ -704,7 +707,7 @@ public abstract class Scheduler extends Manager.Type
 						}
 					}
 					
-					while( hasNext() && (next.isBefore(from) || next.isEqual(from)) )
+					while( hasNext() && !next.isAfter(from) )
 						next();
 				}
 				
