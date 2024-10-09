@@ -350,11 +350,18 @@ public abstract class Origin extends Item<Origin.Type>
 	/**
 	 * This class represents a data Origin that is activated at regular interval.
 	 * <p>You should provide the {@link Scheduled.Type#task(Consumer)} and set a recurrence rule.</p>
+	 * <p>Unless overridden, instances of this entity are always internal.</p>
 	 */
 	public static class Scheduled extends Origin
 	{
 		public static class Type extends Origin.Type
 		{
+			public Type()
+			{
+				super();
+				internal(true);
+			}
+			
 			private Consumer<ZonedDateTime> task = null;
 			private Scheduler.Cron.Type cron = null;
 			

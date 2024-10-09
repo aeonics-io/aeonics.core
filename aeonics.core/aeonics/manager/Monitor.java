@@ -35,7 +35,7 @@ public abstract class Monitor extends Manager.Type
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
 	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: {@link #UNSPECIFIED}</li>
+	 * <li>Level 4: "hit"</li>
 	 * </ol>
 	 * <ul>
 	 * <li>Counter value: +1</li>
@@ -44,7 +44,7 @@ public abstract class Monitor extends Manager.Type
 	 * @see #add(String, String, String, String, long)
 	 * @param entity the target entity
 	 */
-	public void count(Entity entity) { add(entity.category(), StringUtils.toLowerCase(entity.getClass()), entity.id(), UNSPECIFIED, 0); }
+	public void count(Entity entity) { add(entity.category(), StringUtils.toLowerCase(entity.getClass()), entity.id(), "hit", 0); }
 	
 	/**
 	 * Increments the counter of the provided entity by 1 and the accumulated value by the specified amount.
@@ -52,7 +52,7 @@ public abstract class Monitor extends Manager.Type
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
 	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: {@link #UNSPECIFIED}</li>
+	 * <li>Level 4: "hit"</li>
 	 * </ol>
 	 * <ul>
 	 * <li>Counter value: +1</li>
@@ -62,7 +62,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param entity the target entity
 	 * @param value the accumulated value
 	 */
-	public void count(Entity entity, long value) { add(entity.category(), StringUtils.toLowerCase(entity.getClass()), entity.id(), UNSPECIFIED, value); }
+	public void count(Entity entity, long value) { add(entity.category(), StringUtils.toLowerCase(entity.getClass()), entity.id(), "hit", value); }
 	
 	/**
 	 * Increments the counter of the provided entity by 1 and the accumulated value by the specified amount.
@@ -89,7 +89,7 @@ public abstract class Monitor extends Manager.Type
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
 	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: {@link #UNSPECIFIED}</li>
+	 * <li>Level 4: "hit"</li>
 	 * </ol>
 	 * <ul>
 	 * <li>Counter value: +1</li>
@@ -100,7 +100,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param entity the target entity
 	 * @param groupBy a superclass of the entity to group metrics together
 	 */
-	public <T extends Entity> void count(T entity, Class<? super T> groupBy) { add(entity.category(), StringUtils.toLowerCase(groupBy), entity.id(), UNSPECIFIED, 0); }
+	public <T extends Entity> void count(T entity, Class<? super T> groupBy) { add(entity.category(), StringUtils.toLowerCase(groupBy), entity.id(), "hit", 0); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the specified amount.
@@ -108,7 +108,7 @@ public abstract class Monitor extends Manager.Type
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
 	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: {@link #UNSPECIFIED}</li>
+	 * <li>Level 4: "hit"</li>
 	 * </ol>
 	 * <ul>
 	 * <li>Counter value: +1</li>
@@ -120,7 +120,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param groupBy a superclass of the entity to group metrics together
 	 * @param value the accumulated value
 	 */
-	public <T extends Entity> void count(T entity, Class<? super T> groupBy, long value) { add(entity.category(), StringUtils.toLowerCase(groupBy), entity.id(), UNSPECIFIED, value); }
+	public <T extends Entity> void count(T entity, Class<? super T> groupBy, long value) { add(entity.category(), StringUtils.toLowerCase(groupBy), entity.id(), "hit", value); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the specified amount.
@@ -259,7 +259,7 @@ public abstract class Monitor extends Manager.Type
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
 	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: "ms"</li>
+	 * <li>Level 4: "ns"</li>
 	 * </ol>
 	 * <ul>
 	 * <li>Counter value: +1</li>
@@ -269,7 +269,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param entity the target entity
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity) { return ns(entity, StringUtils.toLowerCase(entity.getClass()), "ms"); }
+	public <T extends Entity> AutoCloseable ns(T entity) { return ns(entity, StringUtils.toLowerCase(entity.getClass()), "ns"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
@@ -298,7 +298,7 @@ public abstract class Monitor extends Manager.Type
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
 	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: "ms"</li>
+	 * <li>Level 4: "ns"</li>
 	 * </ol>
 	 * <ul>
 	 * <li>Counter value: +1</li>
@@ -309,7 +309,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param groupBy the group by type
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity, Class<? super T> groupBy) { return ns(entity, StringUtils.toLowerCase(groupBy), "ms"); }
+	public <T extends Entity> AutoCloseable ns(T entity, Class<? super T> groupBy) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
@@ -330,7 +330,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity, Class<? super T> groupBy, String metric) { return ns(entity, StringUtils.toLowerCase(groupBy), "ms"); }
+	public <T extends Entity> AutoCloseable ns(T entity, Class<? super T> groupBy, String metric) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
