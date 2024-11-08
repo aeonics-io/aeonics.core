@@ -24,7 +24,6 @@ import aeonics.manager.Monitor;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Template;
-import aeonics.util.CheckCaller;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
 
@@ -281,12 +280,21 @@ public class Database extends Item<Database.Type>
 		 */
 		public Data query(String sql, Object... params) throws SQLException
 		{
-			if( connection == null ) throw new SQLException("Underlying database connection is not available");
+			if( connection == null )
+			{
+				pool.deadConnection(this);
+				throw new SQLException("Underlying database connection is not available");
+			}
 			
 			try( PreparedStatement p = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) )
 			{
 				for( int i = 0; i < params.length; i++ )
-					p.setObject(i+1, params[i]);
+				{
+					if( params[i] instanceof Data )
+						p.setObject(i+1, ((Data)params[i]).asString());
+					else
+						p.setObject(i+1, params[i]);
+				}
 				if( p.execute() )
 				{
 					// select
@@ -363,17 +371,25 @@ public class Database extends Item<Database.Type>
 		 */
 		public Data tables() throws SQLException
 		{
-			ResultSet r = connection.getMetaData().getTables(connection.getCatalog(), connection.getSchema(), "%", null);
-			Data tables = Data.list();
-			while( r.next() )
+			try
 			{
-				tables.add(Data.map()
-					.put("name", r.getString("TABLE_NAME"))
-					.put("schema", r.getString("TABLE_SCHEM"))
-					.put("database", r.getString("TABLE_CAT"))
-				);
+				ResultSet r = connection.getMetaData().getTables(connection.getCatalog(), connection.getSchema(), "%", null);
+				Data tables = Data.list();
+				while( r.next() )
+				{
+					tables.add(Data.map()
+						.put("name", r.getString("TABLE_NAME"))
+						.put("schema", r.getString("TABLE_SCHEM"))
+						.put("database", r.getString("TABLE_CAT"))
+					);
+				}
+				return tables;
 			}
-			return tables;
+			catch(SQLException e)
+			{
+				pool.deadConnection(this);
+				throw e;
+			}
 		}
 		
 		/**
@@ -399,25 +415,33 @@ public class Database extends Item<Database.Type>
 		 */
 		public Data columns(String table) throws SQLException
 		{
-			ResultSet r = connection.getMetaData().getPrimaryKeys(connection.getCatalog(), connection.getSchema(), table);
-			List<String> primary = new LinkedList<>();
-			while( r.next() )
-				primary.add(r.getString("COLUMN_NAME"));
-			
-			r = connection.getMetaData().getColumns(connection.getCatalog(), connection.getSchema(), table, null);
-			Data columns = Data.list();
-			while( r.next() )
+			try
 			{
-				columns.add(Data.map()
-					.put("name", r.getString("COLUMN_NAME"))
-					.put("size", r.getString("COLUMN_SIZE"))
-					.put("auto", r.getString("IS_AUTOINCREMENT").equals("YES") || r.getString("COLUMN_DEF") != null)
-					.put("null", r.getString("IS_NULLABLE").equals("YES"))
-					.put("type", JDBCType.valueOf(r.getInt("DATA_TYPE")).getName())
-					.put("primary", primary.contains(r.getString("COLUMN_NAME")))
-				);
+				ResultSet r = connection.getMetaData().getPrimaryKeys(connection.getCatalog(), connection.getSchema(), table);
+				List<String> primary = new LinkedList<>();
+				while( r.next() )
+					primary.add(r.getString("COLUMN_NAME"));
+				
+				r = connection.getMetaData().getColumns(connection.getCatalog(), connection.getSchema(), table, null);
+				Data columns = Data.list();
+				while( r.next() )
+				{
+					columns.add(Data.map()
+						.put("name", r.getString("COLUMN_NAME"))
+						.put("size", r.getString("COLUMN_SIZE"))
+						.put("auto", r.getString("IS_AUTOINCREMENT").equals("YES") || r.getString("COLUMN_DEF") != null)
+						.put("null", r.getString("IS_NULLABLE").equals("YES"))
+						.put("type", JDBCType.valueOf(r.getInt("DATA_TYPE")).getName())
+						.put("primary", primary.contains(r.getString("COLUMN_NAME")))
+					);
+				}
+				return columns;
 			}
-			return columns;
+			catch(SQLException e)
+			{
+				pool.deadConnection(this);
+				throw e;
+			}
 		}
 	}
 	
@@ -495,7 +519,6 @@ public class Database extends Item<Database.Type>
 				if( value <= 0 ) return;
 				if( value >= size ) value = size - 1;
 				super.reducePermits(value);
-				this.size -= value;
 			}
 			public int size() { return size; }
 		}
@@ -534,9 +557,13 @@ public class Database extends Item<Database.Type>
 			if( value == size ) // equal : do nothing
 				return;
 			else if( value > size ) // greater : increase limit
+			{
+				permits.size = value;
 				permits.release(value-size);
+			}
 			else // smaller : reduce and cleanup
 			{
+				permits.size = value;
 				permits.reduceBy(size-value);
 				
 				// we need to purge some connections
@@ -634,13 +661,17 @@ public class Database extends Item<Database.Type>
 		 * @hidden
 		 */
 		@Internal
-		public void returnConnection(PooledConnection connection)
+		void returnConnection(PooledConnection connection)
 		{
-			CheckCaller.require(PooledConnection.class, "close");
-			
 			if( active.remove(connection) )
 			{
-				idle.offer(connection);
+				if( connection.isValid() )
+					idle.offer(connection);
+				else
+				{
+					try { connection.destroy(); } catch(Exception e) { /* silent */ }
+				}
+				
 				permits.release();
 			}
 			else
@@ -657,10 +688,8 @@ public class Database extends Item<Database.Type>
 		 * @hidden
 		 */
 		@Internal
-		public void deadConnection(PooledConnection connection)
+		void deadConnection(PooledConnection connection)
 		{
-			CheckCaller.require(PooledConnection.class, "query");
-			
 			if( active.remove(connection) )
 				permits.release();
 			try { connection.destroy(); } catch(Exception e) { /* silent */ }
@@ -752,7 +781,13 @@ public class Database extends Item<Database.Type>
 		 * @throws SQLException if an error happens
 		 * @throws InterruptedException if the operation is interrupted
 		 */
-		public Data tables() throws SQLException, InterruptedException { return next(-1).tables(); }
+		public Data tables() throws SQLException, InterruptedException
+		{
+			try( PooledConnection c = next(-1) )
+			{
+				return c.tables();
+			}
+		}
 		
 		/**
 		 * Returns the list of columns in the specified table.
@@ -776,7 +811,13 @@ public class Database extends Item<Database.Type>
 		 * @throws SQLException if an error happens
 		 * @throws InterruptedException if the operation is interrupted
 		 */
-		public Data columns(String table) throws SQLException, InterruptedException { return next(-1).columns(table); }
+		public Data columns(String table) throws SQLException, InterruptedException
+		{
+			try( PooledConnection c = next(-1) )
+			{
+				return c.columns(table);
+			}
+		}
 		
 		/**
 		 * Returns a full database schema for this connection.
@@ -851,9 +892,14 @@ public class Database extends Item<Database.Type>
 				.description("The password to connect to the database.")
 				.format(Parameter.Format.PASSWORD)
 				.optional(true))
+			.onCreate((data, instance) ->
+			{
+				if( data.get("parameters").containsKey("size") )
+					instance.refreshPoolSize();
+			})
 			.onUpdate((data, instance) ->
 			{
-				if( data.containsKey("size") )
+				if( data.get("parameters").containsKey("size") )
 					instance.refreshPoolSize();
 			})
 			;

@@ -1008,7 +1008,7 @@ public abstract class Storage extends Item<Storage.Type>
 							
 							int limit = valueOf("maxRecords").asInt();
 							if( limit > 0 )
-								sql += " OFFSET 0 ROWS FETCH FIRST " + limit + " ROWS";
+								sql += " OFFSET 0 ROWS FETCH FIRST " + limit + " ROWS ONLY";
 							
 							try
 							{

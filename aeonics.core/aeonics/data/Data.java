@@ -82,7 +82,8 @@ public interface Data extends Iterable<Data>
 	public static Data list() { return new DataList((Collection<?>)null); }
 	
 	/**
-	 * Returns a data list from the specified elements 
+	 * Returns a data list from the specified elements
+	 * @param elements the list of elements
 	 * @return a data list from the specified elements 
 	 */
 	public static Data list(Object ...elements) { return new DataList(elements); }
@@ -505,6 +506,19 @@ public interface Data extends Iterable<Data>
 	 * @return true if an object can be fetched with the specified key
 	 */
 	public boolean containsKey(String key);
+	
+	/**
+	 * Searches this data object and returns the first occurence that match the pattern.
+	 * @param predicate the test function
+	 * @return the first matching element, or null if not found
+	 */
+	public default Data find(Predicate<Data> predicate)
+	{
+		for( Data d : this )
+			if( predicate.test(d) )
+				return d;
+		return null;
+	}
 	
 	/**
 	 * Unwraps the real object value and performs an implicit cast to the receiving type.

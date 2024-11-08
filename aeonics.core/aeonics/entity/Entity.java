@@ -446,7 +446,7 @@ public class Entity implements Exportable, Snapshotable
 	 * Returns whether or not this entity is related to the specified one
 	 * @param relationship the relationship name
 	 * @param entity the related entity
-	 * @returns true if this entity is related to the target one, false otherwise
+	 * @return true if this entity is related to the target one, false otherwise
 	 * @throws IllegalArgumentException if the relationship does not exist
 	 * @throws RuntimeException if the minimum number of relations is reached
 	 */

@@ -16,6 +16,7 @@ import aeonics.manager.Manager;
 import aeonics.util.Callback;
 import aeonics.util.Documented;
 import aeonics.util.Functions.BiConsumer;
+import aeonics.util.Json;
 import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
 
@@ -405,6 +406,9 @@ public class Template<T extends Entity> implements Documented
 			if( enforceParameterValidation() && !p.validate(value) )
 				throw new RuntimeException("Invalid value for parameter " + p.name());
 			
+			if( p.format().equals(Parameter.Format.JSON) && value.isString() )
+				value = Json.decode(value.asString());
+			
 			instance.parameters().put(p.name(), Tuple.of(value, p));
 		}
 		
@@ -431,6 +435,9 @@ public class Template<T extends Entity> implements Documented
 					Data value = link.get(p.name());
 					if( enforceParameterValidation() && !p.validate(value) )
 						throw new RuntimeException("Invalid value for parameter " + p.name() + " of relationship " + r.name());
+					
+					if( p.format().equals(Parameter.Format.JSON) && value.isString() )
+						link.put(p.name(), Json.decode(value.asString()));
 				}
 				instance.addUncheckedRelation(r.name(), link.asString("id"), link);
 			}
@@ -504,6 +511,9 @@ public class Template<T extends Entity> implements Documented
 			Data value = data_parameters.get(p.name());
 			if( enforceParameterValidation() && !p.validate(value) )
 				throw new RuntimeException("Invalid value for parameter " + p.name());
+
+			if( p.format().equals(Parameter.Format.JSON) && value.isString() )
+				value = Json.decode(value.asString());
 			
 			Tuple<Data, Parameter> t = instance.parameters().get(p.name());
 			if( t == null ) instance.parameters().put(p.name(), Tuple.of(value, p));
@@ -534,6 +544,9 @@ public class Template<T extends Entity> implements Documented
 					Data value = link.get(p.name());
 					if( enforceParameterValidation() && !p.validate(value) )
 						throw new RuntimeException("Invalid value for parameter " + p.name() + " of relationship " + r.name());
+
+					if( p.format().equals(Parameter.Format.JSON) && value.isString() )
+						link.put(p.name(), Json.decode(value.asString()));
 				}
 				instance.addUncheckedRelation(r.name(), link.asString("id"), link);
 			}

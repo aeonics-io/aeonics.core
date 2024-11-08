@@ -10,6 +10,7 @@ import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
+import aeonics.util.Json;
 import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
 
@@ -168,7 +169,7 @@ public class User extends Item<User.Type>
 				.format(Parameter.Format.JSON)
 				.optional(true)
 				.defaultValue(Data.map())
-				.validator(Data::isMap))
+				.validator((v) -> v != null && (v.isMap() || Json.decode(v.asString()).isMap())))
 			.add(new Relationship("roles")
 				.category(Role.class)
 				.summary("Roles")
