@@ -74,26 +74,26 @@ public abstract class Action extends Item<Action.Type>
 			add(new Relationship("actions")
 				.category(Action.class)
 				.summary("Linked Actions")
-				.description("List of action entities that are directly connected to this queue.")
+				.description("List of action entities that are directly connected to this action.")
 				.add(new Parameter("input")
 					.summary("Input Channel")
 					.description("The name of the input channel of the target action.")
 					.format(Parameter.Format.TEXT))
 				.add(new Parameter("output")
 					.summary("Output Channel")
-					.description("The name of the input channel to which this action is bound.")
+					.description("The name of the output channel to which this action is bound.")
 					.format(Parameter.Format.TEXT)));
 			add(new Relationship("destinations")
 				.category(Destination.class)
 				.summary("Linked Destinations")
-				.description("List of destination entities that are directly connected to this queue.")
+				.description("List of destination entities that are directly connected to this action.")
 				.add(new Parameter("input")
 					.summary("Input Channel")
 					.description("The name of the input channel of the target destination.")
 					.format(Parameter.Format.TEXT))
 				.add(new Parameter("output")
 					.summary("Output Channel")
-					.description("The name of the input channel to which this action is bound.")
+					.description("The name of the output channel to which this action is bound.")
 					.format(Parameter.Format.TEXT)));
 		}
 		
@@ -206,6 +206,13 @@ public abstract class Action extends Item<Action.Type>
 		 */
 		@Override
 		public final String category() { return StringUtils.toLowerCase(Action.class); }
+		
+		/**
+		 * The name of the icon used to render this action visually.
+		 * Subclasses are encouraged to override this method.
+		 * @return the icon name
+		 */
+		public String icon() { return "crop_rotate"; }
 	}
 	
 	protected Class<? extends Action.Type> defaultTarget() { return Action.Type.class; }

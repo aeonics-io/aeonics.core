@@ -141,6 +141,13 @@ public abstract class Origin extends Item<Origin.Type>
 	public static class Type extends Entity implements Closeable
 	{
 		/**
+		 * The name of the icon used to render this action visually.
+		 * Subclasses are encouraged to override this method.
+		 * @return the icon name
+		 */
+		public String icon() { return "cloud_upload"; }
+		
+		/**
 		 * This method will call the {@link Topic.Type#publish(Message)} method of all topics that are bound to the specified channel.
 		 * @param message the message to publish
 		 * @param channel the name of the output channel

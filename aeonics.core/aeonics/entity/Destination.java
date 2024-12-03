@@ -143,6 +143,13 @@ public class Destination extends Item<Destination.Type>
 		 */
 		@Override
 		public final String category() { return StringUtils.toLowerCase(Destination.class); }
+
+		/**
+		 * The name of the icon used to render this action visually.
+		 * Subclasses are encouraged to override this method.
+		 * @return the icon name
+		 */
+		public String icon() { return "where_to_vote"; }
 	}
 	
 	protected Class<? extends Destination.Type> defaultTarget() { return Destination.Type.class; }

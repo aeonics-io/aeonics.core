@@ -9,6 +9,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -44,6 +45,11 @@ public class Http
 		 * @param body the body
 		 */
 		public Error(int code, String body) { this.code = code; this.body = body; }
+		
+		public String toString()
+		{
+			return "Http error " + code + ": " + body;
+		}
 	}
 	
 	/**
@@ -171,13 +177,14 @@ public class Http
 			{
 				try( InputStream response = connection.getInputStream() )
 				{
-					if( connection.getContentType().startsWith("application/json") )
+					if( Objects.requireNonNullElse(connection.getContentType(), "").startsWith("application/json") )
 						return Json.decode(new String(response.readAllBytes(), StandardCharsets.ISO_8859_1));
 					else
 						return Data.of(new String(response.readAllBytes(), StandardCharsets.ISO_8859_1));
 				}
 			}
 		}
+		catch(Http.Error he) { throw he; }
 		catch(Exception e)
 		{
 			throw new RuntimeException(e);
@@ -282,13 +289,14 @@ public class Http
 			{
 				try( InputStream response = connection.getInputStream() )
 				{
-					if( connection.getContentType().startsWith("application/json") )
+					if( Objects.requireNonNullElse(connection.getContentType(), "").startsWith("application/json") )
 						return Json.decode(new String(response.readAllBytes(), StandardCharsets.ISO_8859_1));
 					else
 						return Data.of(new String(response.readAllBytes(), StandardCharsets.ISO_8859_1));
 				}
 			}
 		}
+		catch(Http.Error he) { throw he; }
 		catch(Exception e)
 		{
 			throw new RuntimeException(e);

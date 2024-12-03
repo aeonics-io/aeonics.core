@@ -70,6 +70,13 @@ public class Topic extends Item<Topic.Type>
 		 */
 		@Override
 		public final String category() { return StringUtils.toLowerCase(Topic.class); }
+
+		/**
+		 * The name of the icon used to render this action visually.
+		 * Subclasses are encouraged to override this method.
+		 * @return the icon name
+		 */
+		public String icon() { return "alt_route"; }
 	}
 	
 	protected Class<? extends Topic.Type> defaultTarget() { return Topic.Type.class; }

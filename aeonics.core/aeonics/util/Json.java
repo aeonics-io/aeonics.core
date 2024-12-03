@@ -247,7 +247,7 @@ public class Json
 					case MAP: return parseMap(data, state);
 					case END: // cannot parse this, assume all is a unquoted literal
 						return Data.of(data);
-					case UNQUOTED: return Data.of(parseUnQuoted(data, state));
+					case UNQUOTED: return Data.of(rawValueFromUnquoted(parseUnQuoted(data, state)));
 					case SINGLEQUOTED: return Data.of(parseSingleQuoted(data, state));
 					case DOUBLEQUOTED: return Data.of(parseDoubleQuoted(data, state));
 					case EOF: return Data.empty();
@@ -355,7 +355,17 @@ public class Json
 			
 			String value = data.substring(state.mark, state.i);
 			if( needUnescape ) return unescape(value);
+			else return value;
+		}
+		
+		private static Object rawValueFromUnquoted(String value)
+		{
+			if( value == null ) return null;
 			else if( value.length() == 4 && value.equals("null") ) return null;
+			else if( value.length() == 5 && value.equals("false") ) return false;
+			else if( value.length() == 4 && value.equals("true") ) return true;
+			else if( StringUtils.isInteger(value) ) return Long.parseLong(value);
+			else if( StringUtils.isFloatingPoint(value) ) return Double.parseDouble(value);
 			else return value;
 		}
 		
@@ -387,7 +397,7 @@ public class Json
 						if( key == null ) key = parseUnQuoted(data, state);
 						else
 						{
-							map.put(key, parseUnQuoted(data, state));
+							map.put(key, rawValueFromUnquoted(parseUnQuoted(data, state)));
 							key = null;
 						}
 						break;
@@ -426,7 +436,7 @@ public class Json
 					case END:          return array;
 					case ARRAY:        array.add(parseArray(data, state));        break;
 					case MAP:          array.add(parseMap(data, state));          break;
-					case UNQUOTED:     array.add(parseUnQuoted(data, state));     break;
+					case UNQUOTED:     array.add(rawValueFromUnquoted(parseUnQuoted(data, state)));     break;
 					case SINGLEQUOTED: array.add(parseSingleQuoted(data, state)); break;
 					case DOUBLEQUOTED: array.add(parseDoubleQuoted(data, state)); break;
 					case COMMENTBLOCK: skipCommentBlock(data, state);             break;

@@ -13,6 +13,7 @@ import aeonics.Protocols;
 import aeonics.entity.Database;
 import aeonics.entity.Debug;
 import aeonics.entity.Discard;
+import aeonics.entity.Flow;
 import aeonics.entity.Origin;
 import aeonics.entity.Probe;
 import aeonics.entity.Queue;
@@ -119,6 +120,7 @@ public class Main extends Plugin
 		Factory.add(new Storage.Memory());
 		Factory.add(new Storage.Database());
 		Factory.add(new Topic());
+		Factory.add(new Flow());
 		
 		// security entities
 		Factory.add(new Group());
