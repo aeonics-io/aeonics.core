@@ -44,6 +44,12 @@ public abstract class Snapshot extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Snapshot.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Snapshot get() { return Manager.of(Snapshot.class); }
+	
+	/**
 	 * The snapshot create callback
 	 */
 	protected static Callback<Data, Snapshot> createCallback = new Callback<>(() -> Manager.of(Snapshot.class));

@@ -95,6 +95,7 @@ public abstract class Action extends Item<Action.Type>
 					.summary("Output Channel")
 					.description("The name of the output channel to which this action is bound.")
 					.format(Parameter.Format.TEXT)));
+			icon("crop_rotate");
 		}
 		
 		/**
@@ -206,13 +207,6 @@ public abstract class Action extends Item<Action.Type>
 		 */
 		@Override
 		public final String category() { return StringUtils.toLowerCase(Action.class); }
-		
-		/**
-		 * The name of the icon used to render this action visually.
-		 * Subclasses are encouraged to override this method.
-		 * @return the icon name
-		 */
-		public String icon() { return "crop_rotate"; }
 	}
 	
 	protected Class<? extends Action.Type> defaultTarget() { return Action.Type.class; }

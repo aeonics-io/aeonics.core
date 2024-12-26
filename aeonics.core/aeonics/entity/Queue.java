@@ -45,13 +45,6 @@ public class Queue extends Item<Queue.Type>
 	public static class Type extends Entity implements Consumer<Message>
 	{
 		/**
-		 * The name of the icon used to render this action visually.
-		 * Subclasses are encouraged to override this method.
-		 * @return the icon name
-		 */
-		public String icon() { return "stacks"; }
-		
-		/**
 		 * Matches the parameter but already parsed for performance reasons
 		 */
 		private int concurrency = 0;
@@ -333,6 +326,7 @@ public class Queue extends Item<Queue.Type>
 			{
 				((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
 				((Queue.Type)instance).limit = instance.valueOf("limit").asInt();
-			});
+			})
+			.icon("stacks");
 	}
 }

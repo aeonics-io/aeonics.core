@@ -17,6 +17,12 @@ public abstract class Timeout extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Timeout.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Timeout get() { return Manager.of(Timeout.class); }
+	
+	/**
 	 * This class englobes a target object to track and defines a {@link #delay()}.
 	 * The target object is kept as a weak reference.
 	 * 

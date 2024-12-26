@@ -408,7 +408,8 @@ public abstract class Storage extends Item<Storage.Type>
 					.description("The root directory of this storage. All content will be stored as file or directory under this root path.")
 					.format(Parameter.Format.TEXT)
 					.optional(true)
-					.defaultValue(""));
+					.defaultValue(""))
+				.icon("folder");
 		}
 	}
 	
@@ -509,7 +510,8 @@ public abstract class Storage extends Item<Storage.Type>
 		{
 			return (Template<Memory.Type>) super.template()
 				.summary("Memory storage")
-				.description("This storage is non-persistent as it stores content directly in the heap memory of the application. However, it is the fastest to read and write data.");
+				.description("This storage is non-persistent as it stores content directly in the heap memory of the application. However, it is the fastest to read and write data.")
+				.icon("memory");
 		}
 	}
 	
@@ -1065,7 +1067,8 @@ public abstract class Storage extends Item<Storage.Type>
 					.format(Parameter.Format.NUMBER)
 					.rule(Parameter.Rule.INTEGER)
 					.defaultValue(-1)
-					.optional(true));
+					.optional(true))
+				.icon("database");
 		}
 	}
 }

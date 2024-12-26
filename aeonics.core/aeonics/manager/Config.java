@@ -28,6 +28,12 @@ public abstract class Config extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Config.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Config get() { return Manager.of(Config.class); }
+	
+	/**
 	 * Returns the normalized imploded parameter name based on the type and friendly name.
 	 * <p>The normalization process is:</p>
 	 * <pre>type.getName().toLowerCase().replace('_', '.') + ":" + name.toLowerCase().replace('_', '.');</pre>

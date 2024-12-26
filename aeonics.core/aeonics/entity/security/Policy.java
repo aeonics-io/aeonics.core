@@ -76,7 +76,7 @@ public abstract class Policy extends Item<Policy.Type>
 				.summary("Rule")
 				.description("The security rule to apply to this policy. The rule can be a logical combination of other rules.")
 				.max(1))
-			;
+			.icon("policy");
 	}
 	
 	protected Class<? extends Policy> category() { return Policy.class; }

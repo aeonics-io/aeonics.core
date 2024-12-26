@@ -35,6 +35,12 @@ public abstract class Scheduler extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Scheduler.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Scheduler get() { return Manager.of(Scheduler.class); }
+	
+	/**
 	 * A task that should be executed at regular interval. The recurrence is defined by a RFC-5545 compliant "RRULE" and "DTSART".
 	 */
 	public abstract static class Cron extends Item<Cron.Type>

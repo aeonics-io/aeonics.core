@@ -65,6 +65,7 @@ public class Probe extends Item<Probe.Type>
 	{
 		return (Template<Probe.Type>) super.template()
 			.summary("Probe")
-			.description("This entity provides probe data.");
+			.description("This entity provides probe data.")
+			.icon("monitor_heart");
 	}
 }

@@ -72,6 +72,7 @@ public class Discard
 		.template()
 		.summary("Discard")
 		.description("This data origin is used as a last resort for all discarded messages. It publishes in the internal 'discard' topic.")
+		.icon("delete")
 		.<Origin.Template>cast()
 		.output(new Channel("data")
 			.summary("Data")
@@ -81,7 +82,7 @@ public class Discard
 			.template()
 			.create(Data.map().put("id", "10000000-1700000000000000"))
 			.name("discard")
-			.internal(true), Data.map().put("channel", "data"))
+			.internal(true), Data.map().put("output", "data"))
 		.name("Discard")
 		.internal(true);
 	

@@ -902,6 +902,7 @@ public class Database extends Item<Database.Type>
 				if( data.get("parameters").containsKey("size") )
 					instance.refreshPoolSize();
 			})
+			.icon("database")
 			;
 	}
 }

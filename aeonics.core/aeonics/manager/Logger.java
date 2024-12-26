@@ -20,6 +20,12 @@ public abstract class Logger extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Logger.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Logger get() { return Manager.of(Logger.class); }
+	
+	/**
 	 * Severe errors (1000)
 	 */
 	public static final int SEVERE = 1000;

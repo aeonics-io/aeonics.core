@@ -160,7 +160,8 @@ public abstract class Provider extends Item<Provider.Type>
 			{
 				if( data.containsKey("key") ) ((Provider.Type)instance).key = data.asString("key");
 				else ((Provider.Type)instance).key = Manager.of(Security.class).randomHash();
-			});
+			})
+			.icon("account_balance");
 	}
 	
 	protected Class<? extends Provider> category() { return Provider.class; }

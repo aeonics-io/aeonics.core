@@ -28,6 +28,12 @@ public abstract class Vault extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Vault.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Vault get() { return Manager.of(Vault.class); }
+	
+	/**
 	 * Returns the data associated with the specified name.
 	 * This is the same as calling {@link #get(String, String)} with a <code>null</code> key.
 	 * @param name the value to retrieve 

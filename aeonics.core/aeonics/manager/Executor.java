@@ -28,6 +28,12 @@ public abstract class Executor extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Executor.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Executor get() { return Manager.of(Executor.class); }
+	
+	/**
 	 * Schedules the specified task to run in priority. 
 	 * There are no guarantees in terms of execution speed although it shall attempt to run before other tasks.
 	 * This method may block or not depending on the implementation. It may reject a task or enqueue it depending on specific conditions.
@@ -653,6 +659,7 @@ public abstract class Executor extends Manager.Type
 		 */
 		protected static Task<Void> all(List<Task<?>> tasks, java.util.concurrent.Executor executor)
 		{
+			if( tasks == null || tasks.size() == 0 ) return Task.completed(null, executor);
 			CompletableFuture<?>[] cfs = new CompletableFuture[tasks.size()];
 			for( int i = 0; i < tasks.size(); i++ ) cfs[i] = tasks.get(i).future;
 			return new Task<Void>(CompletableFuture.allOf(cfs), executor);

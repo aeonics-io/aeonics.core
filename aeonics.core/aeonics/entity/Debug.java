@@ -43,6 +43,7 @@ public class Debug
 		.template()
 		.summary("Debug")
 		.description("This data origin is used as a common central debug point. It publishes in the internal 'debug' topic.")
+		.icon("bug_report")
 		.<Origin.Template>cast()
 		.output(new Channel("data")
 			.summary("Data")
@@ -52,12 +53,13 @@ public class Debug
 			.template()
 			.create(Data.map().put("id", "10000000-1500000000000000"))
 			.name("debug")
-			.internal(true), Data.map().put("channel", "data"))
+			.internal(true), Data.map().put("output", "data"))
 		.name("Debug")
-		.internal(true);
+		.internal(true)
+		;
 	
 	/**
-	 * Generate debug data. The call stack trace will be included in the message
+	 * Generate debug data with the specified values and the call stack trace
 	 * @param key the message key (see {@link Message#key()})
 	 * @param values all the values that should be included
 	 */
@@ -66,6 +68,33 @@ public class Debug
 		Message m = new Message(key);
 		m.user(User.SYSTEM.id());
 		m.content(Data.map().put("stack", getStackTrace()).put("values", values));
+		
+		DEBUG.emit(m, "data");
+	}
+	
+	/**
+	 * Generate debug data with the specified values
+	 * @param key the message key (see {@link Message#key()})
+	 * @param values all the values that should be included
+	 */
+	public static void values(String key, Object ...values)
+	{
+		Message m = new Message(key);
+		m.user(User.SYSTEM.id());
+		m.content(Data.map().put("values", values));
+		
+		DEBUG.emit(m, "data");
+	}
+	
+	/**
+	 * Generate debug data with the call stack trace
+	 * @param key the message key (see {@link Message#key()})
+	 */
+	public static void stacktrace(String key)
+	{
+		Message m = new Message(key);
+		m.user(User.SYSTEM.id());
+		m.content(Data.map().put("stack", getStackTrace()));
 		
 		DEBUG.emit(m, "data");
 	}

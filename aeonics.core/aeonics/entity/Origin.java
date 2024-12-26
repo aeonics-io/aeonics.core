@@ -90,13 +90,14 @@ public abstract class Origin extends Item<Origin.Type>
 			add(new Relationship("topics")
 				.category(Topic.class)
 				.summary("Topics")
-				.description("The list of output channel to topic link. Multiple topics can be bound to the same channel and one topic can be bound to mulriple channels.")
-				.add(new Parameter("channel")
-					.summary("Channel")
+				.description("The list of output channel to topic link. Multiple topics can be bound to the same channel and one topic can be bound to multiple channels.")
+				.add(new Parameter("output")
+					.summary("Output channel")
 					.description("The name of the output channel to which this topic is bound.")
 					.format(Parameter.Format.TEXT)
 				)
 			);
+			icon("cloud_upload");
 		}
 		
 		/**
@@ -141,13 +142,6 @@ public abstract class Origin extends Item<Origin.Type>
 	public static class Type extends Entity implements Closeable
 	{
 		/**
-		 * The name of the icon used to render this action visually.
-		 * Subclasses are encouraged to override this method.
-		 * @return the icon name
-		 */
-		public String icon() { return "cloud_upload"; }
-		
-		/**
 		 * This method will call the {@link Topic.Type#publish(Message)} method of all topics that are bound to the specified channel.
 		 * @param message the message to publish
 		 * @param channel the name of the output channel
@@ -168,7 +162,7 @@ public abstract class Origin extends Item<Origin.Type>
 			boolean shouldClone = false;
 			for( Tuple<Entity, Data> relation : this.relations("topics") )
 			{
-				if( channel.equals(relation.b.asString("channel")) )
+				if( channel.equals(relation.b.asString("output")) )
 				{
 					Topic.Type t = relation.a.cast();
 					if( t != null )

@@ -178,6 +178,6 @@ public class User extends Item<User.Type>
 				.category(Group.class)
 				.summary("Groups")
 				.description("List of user groups."))
-			;
+			.icon("person");
 	}
 }

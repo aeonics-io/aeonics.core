@@ -51,6 +51,12 @@ public abstract class Network extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Network.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Network get() { return Manager.of(Network.class); }
+	
+	/**
 	 * This class represents a set of security options that can be applied to secure a {@link Connection}.
 	 * Some methods are only meaningful in case of a client or server connection, they are named accordingly.
 	 * If some options are not specified, defaults will be used.

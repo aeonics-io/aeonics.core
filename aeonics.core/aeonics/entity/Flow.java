@@ -87,6 +87,7 @@ public class Flow extends Item<Flow.Type>
 					.add(new Parameter("x").summary("X").description("The X position in the data flow grid").format(Parameter.Format.NUMBER).rule(Parameter.Rule.INTEGER).defaultValue(0))
 					.add(new Parameter("y").summary("Y").description("The Y position in the data flow grid").format(Parameter.Format.NUMBER).rule(Parameter.Rule.INTEGER).defaultValue(0))
 			)
+			.icon("share")
 			;
 	}
 }

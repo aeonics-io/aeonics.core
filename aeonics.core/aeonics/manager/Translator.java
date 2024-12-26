@@ -16,6 +16,12 @@ public abstract class Translator extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Translator.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Translator get() { return Manager.of(Translator.class); }
+	
+	/**
 	 * Sets the default language
 	 * @param language the ISO-639 (2 letter) language code
 	 */

@@ -78,6 +78,12 @@ public abstract class Lifecycle extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Lifecycle.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Lifecycle get() { return Manager.of(Lifecycle.class); }
+	
+	/**
 	 * The different application phases.
 	 */
 	public enum Phase

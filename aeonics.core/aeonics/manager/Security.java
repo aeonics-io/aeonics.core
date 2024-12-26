@@ -25,6 +25,12 @@ public abstract class Security extends Manager.Type
 	public final Class<? extends Manager.Type> manager() { return Security.class; }
 	
 	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Security get() { return Manager.of(Security.class); }
+	
+	/**
 	 * Produces a random meaningless and opaque hash.
 	 * The goal of this function is to serve as source of entropy to generate cryptographycally-sufficient long random string values.
 	 * <p>This is a good candidate to generate a {@link Token}.</p>

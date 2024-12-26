@@ -27,6 +27,12 @@ public abstract class Monitor extends Manager.Type
 	 */
 	public final Class<? extends Manager.Type> manager() { return Monitor.class; }
 	
+	/**
+	 * Returns the current active instance of this manager type.
+	 * @return the current active instance of this manager type
+	 */
+	public static Monitor get() { return Manager.of(Monitor.class); }
+	
 	public static final String UNSPECIFIED = "unspecified";
 	
 	/**

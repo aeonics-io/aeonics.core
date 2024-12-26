@@ -57,6 +57,6 @@ public class Group extends Item<Group.Type>
 				.category(Role.class)
 				.summary("Roles")
 				.description("List of roles that apply to all users in this group."))
-			;
+			.icon("group");
 	}
 }

@@ -132,6 +132,16 @@ public class Entity implements Exportable, Snapshotable
 	public String type() { return type; }
 	
 	/**
+	 * Fetches the template associated with this entity.
+	 * @return the template associated with this entity
+	 * @see Factory#of(Entity)
+	 */
+	public Template<Entity> template()
+	{
+		return Factory.of(this);
+	}
+	
+	/**
 	 * Whether or not this entity is internal to the system.
 	 */
 	private boolean internal = false;
@@ -315,6 +325,27 @@ public class Entity implements Exportable, Snapshotable
 	public void removeRelation(String value)
 	{
 		relationships.remove(value);
+	}
+	
+	/**
+	 * Returns the number of relationship types that this entity contains.
+	 * @return the number of relationship types that this entity contains
+	 */
+	public int countRelations()
+	{
+		return relationships.size();
+	}
+	
+	/**
+	 * Returns the number of active relations for the target relationship type.
+	 * @param name the name of the relationship
+	 * @return the number of active relations for the target relationship type.
+	 */
+	public int countRelations(String name)
+	{
+		Tuple<List<Data>, Relationship> r = relationships.get(name);
+		if( r == null ) return 0;
+		return r.a.size();
 	}
 	
 	/**

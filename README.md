@@ -1,6 +1,6 @@
 ## Plugin: "aeonics.core"
 
-This *Nucleus Runtime* plugin provides the core implementation of the system.
+This Aeonics software plugin provides the core implementation of the system.
 
 ## Compile and package
 

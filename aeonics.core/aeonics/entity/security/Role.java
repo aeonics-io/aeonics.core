@@ -51,6 +51,6 @@ public class Role extends Item<Role.Type>
 				.optional(true)
 				.defaultValue(Data.map())
 				.validator((v) -> v != null && (v.isMap() || Json.decode(v.asString()).isMap())))
-			;
+			.icon("badge");
 	}
 }
