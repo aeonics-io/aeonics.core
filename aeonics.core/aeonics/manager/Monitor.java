@@ -27,6 +27,13 @@ public abstract class Monitor extends Manager.Type
 	 */
 	public final Class<? extends Manager.Type> manager() { return Monitor.class; }
 	
+	public static class MonitorTimer implements AutoCloseable
+	{
+		Runnable onClose = null;
+		public MonitorTimer(Runnable onClose) { this.onClose = onClose; }
+		public void close() { if( onClose != null ) onClose.run(); onClose = null; }
+	}
+	
 	/**
 	 * Returns the current active instance of this manager type.
 	 * @return the current active instance of this manager type
@@ -151,7 +158,7 @@ public abstract class Monitor extends Manager.Type
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed milliseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ms(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ms = Monitor.ms(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
@@ -166,11 +173,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param entity the target entity
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ms(T entity) { return ms(entity, StringUtils.toLowerCase(entity.getClass()), "ms"); }
+	public <T extends Entity> MonitorTimer ms(T entity) { return ms(entity, StringUtils.toLowerCase(entity.getClass()), "ms"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed milliseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ms(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ms = Monitor.ms(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
@@ -186,11 +193,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ms(T entity, String metric) { return ms(entity, StringUtils.toLowerCase(entity.getClass()), metric); }
+	public <T extends Entity> MonitorTimer ms(T entity, String metric) { return ms(entity, StringUtils.toLowerCase(entity.getClass()), metric); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed milliseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ms(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ms = Monitor.ms(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
@@ -206,11 +213,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param groupBy the group by type
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ms(T entity, Class<? super T> groupBy) { return ms(entity, StringUtils.toLowerCase(groupBy), "ms"); }
+	public <T extends Entity> MonitorTimer ms(T entity, Class<? super T> groupBy) { return ms(entity, StringUtils.toLowerCase(groupBy), "ms"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed milliseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ms(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ms = Monitor.ms(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
@@ -227,11 +234,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ms(T entity, Class<? super T> groupBy, String metric) { return ms(entity, StringUtils.toLowerCase(groupBy), "ms"); }
+	public <T extends Entity> MonitorTimer ms(T entity, Class<? super T> groupBy, String metric) { return ms(entity, StringUtils.toLowerCase(groupBy), "ms"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed milliseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ms(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ms = Monitor.ms(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by string</li>
@@ -248,19 +255,17 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ms(T entity, String groupBy, String metric)
+	public <T extends Entity> MonitorTimer ms(T entity, String groupBy, String metric)
 	{
-		return new AutoCloseable() {
-			private long start = System.currentTimeMillis();
-			public void close() throws Exception {
-				add(entity.category(), groupBy, entity.id(), metric, System.currentTimeMillis()-start);
-			}
-		};
+		final long start = System.currentTimeMillis();
+		return new MonitorTimer(() -> {
+			add(entity.category(), groupBy, entity.id(), metric, System.currentTimeMillis()-start);
+		});
 	}
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ns(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
@@ -275,11 +280,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param entity the target entity
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity) { return ns(entity, StringUtils.toLowerCase(entity.getClass()), "ns"); }
+	public <T extends Entity> MonitorTimer ns(T entity) { return ns(entity, StringUtils.toLowerCase(entity.getClass()), "ns"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ns(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: entity class name</li>
@@ -295,11 +300,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity, String metric) { return ns(entity, StringUtils.toLowerCase(entity.getClass()), metric); }
+	public <T extends Entity> MonitorTimer ns(T entity, String metric) { return ns(entity, StringUtils.toLowerCase(entity.getClass()), metric); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ns(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
@@ -315,11 +320,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param groupBy the group by type
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity, Class<? super T> groupBy) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
+	public <T extends Entity> MonitorTimer ns(T entity, Class<? super T> groupBy) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ns(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by type</li>
@@ -336,11 +341,11 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity, Class<? super T> groupBy, String metric) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
+	public <T extends Entity> MonitorTimer ns(T entity, Class<? super T> groupBy, String metric) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
-	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( AutoCloseable ms = Monitor.ns(...) ) { ... }</code></p>
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
 	 * <ol>
 	 * <li>Level 1: entity category</li>
 	 * <li>Level 2: the group by string</li>
@@ -357,14 +362,12 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> AutoCloseable ns(T entity, String groupBy, String metric)
+	public <T extends Entity> MonitorTimer ns(T entity, String groupBy, String metric)
 	{
-		return new AutoCloseable() {
-			private long start = System.nanoTime();
-			public void close() throws Exception {
+		final long start = System.nanoTime();
+		return new MonitorTimer(() -> {
 				add(entity.category(), groupBy, entity.id(), metric, System.nanoTime()-start);
-			}
-		};
+		});
 	}
 	
 	/**

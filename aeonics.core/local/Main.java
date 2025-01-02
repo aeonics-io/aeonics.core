@@ -14,10 +14,11 @@ import aeonics.entity.Database;
 import aeonics.entity.Debug;
 import aeonics.entity.Discard;
 import aeonics.entity.Flow;
-import aeonics.entity.Origin;
 import aeonics.entity.Probe;
 import aeonics.entity.Queue;
 import aeonics.entity.Registry;
+import aeonics.entity.Scheduled;
+import aeonics.entity.Step;
 import aeonics.entity.Storage;
 import aeonics.entity.Topic;
 import aeonics.entity.security.Group;
@@ -88,7 +89,6 @@ public class Main extends Plugin
 		
 		Lifecycle.before(Phase.LOAD, this::onBeforeLoad);
 		Lifecycle.on(Phase.LOAD, this::onLoad);
-		Lifecycle.on(Phase.CONFIG, this::onConfig);
 		
 		Boot.spark(() ->
 		{
@@ -112,8 +112,8 @@ public class Main extends Plugin
 	{
 		// basic entities
 		Factory.add(new Database());
-		Factory.add(new Origin.Basic());
-		Factory.add(new Origin.Scheduled());
+		Factory.add(new Step.Origin());
+		Factory.add(new Scheduled());
 		Factory.add(new Probe());
 		Factory.add(new Queue());
 		Factory.add(new Storage.File());
@@ -141,6 +141,10 @@ public class Main extends Plugin
 		Factory.add(new Rule.Role());
 		Factory.add(new Rule.Xor());
 		Factory.add(new User());
+		
+		// static initializers
+		Debug.register();
+		Discard.register();
 	}
 	
 	public void onLoad()
@@ -167,11 +171,5 @@ public class Main extends Plugin
 			.rule(Parameter.Rule.JSON_LIST)
 			.defaultValue("[TLSv1.3,TLSv1.2]")
 			);
-	}
-	
-	public void onConfig()
-	{
-		Debug.register();
-		Discard.register();
 	}
 }

@@ -182,6 +182,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	
 	/**
 	 * Adds the specified entity into this registry. The {@link Entity#category()} should match this registry's category.
+	 * If an existing entity is already registered with the same id, it is replaced with the one provided.
+	 * 
+	 * <p>Note that internal entities cannot be replaced. If you need to replace an internal entity, remove its internal flag first.</p>
 	 * @param <U> the entity type
 	 * @param entity the entity
 	 * @return the entity
@@ -191,6 +194,11 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	{
 		if( entity == null ) throw new IllegalArgumentException("Cannot register a null entity");
 		if( !entity.category().equals(category()) ) throw new IllegalArgumentException("Entity category mismatch");
+		if( entities.containsKey(entity.id()) )
+		{
+			Entity e = entities.get(entity.id());
+			if( e != null && e.internal() ) throw new IllegalArgumentException("Cannot replace an internal entity");
+		}
 		entities.put(entity.id(), entity);
 		onAdd().trigger(entity);
 		return entity;
@@ -200,6 +208,8 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	 * Removes the specified entity.
 	 * The id is checked first and is a very cheap lookup. If nothing matches, all entities are checked to find the first `name` property that matches.
 	 * If the entity is {@link Closeable}, it is closed.
+	 * 
+	 * <p>Note that internal entities cannot be removed. If you need to remove an internal entity, remove its internal flag first.</p>
 	 * @param <U> the entity type
 	 * @param id the entity id
 	 * @return the removed entity or null if no entity was found
@@ -207,9 +217,10 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	public <U extends T> U remove(String id)
 	{
 		if( id == null || id.isBlank() ) return null;
-		T entity = entities.remove(id);
-		if( entity != null )
+		T entity = entities.get(id);
+		if( entity != null && !entity.internal() )
 		{
+			entities.remove(id, entity);
 			onRemove().trigger(entity);
 			return closeIfCloseable((U) entity);
 		}
@@ -217,9 +228,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 		// search by name : much slower
 		for( T e : entities.values() )
 		{
-			if( e != null && id.equals(e.name()) )
+			if( e != null && !e.internal() && id.equals(e.name()) )
 			{
-				entities.remove(e.id());
+				entities.remove(e.id(), e);
 				onRemove().trigger(e);
 				return closeIfCloseable((U) e);
 			}
@@ -230,6 +241,8 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	/**
 	 * Removes the first entity matching the specified criteria.
 	 * If the entity is {@link Closeable}, it is closed.
+	 * 
+	 * <p>Note that internal entities cannot be removed. If you need to remove an internal entity, remove its internal flag first.</p>
 	 * @param <U> the entity type
 	 * @param comparator the matching criteria
 	 * @return the removed entity or null if no entity was found
@@ -239,9 +252,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 		if( comparator == null ) return null;
 		for( T entity : entities.values() )
 		{
-			if( entity != null && comparator.test(entity) )
+			if( entity != null && !entity.internal() && comparator.test(entity) )
 			{
-				entities.remove(entity.id());
+				entities.remove(entity.id(), entity);
 				onRemove().trigger(entity);
 				return closeIfCloseable((U) entity);
 			}
@@ -258,6 +271,8 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	/**
 	 * Removes all entities from this registry matching the specified criteria.
 	 * If the entity is {@link Closeable}, it is closed.
+	 * 
+	 * <p>Note that internal entities cannot be removed. If you need to remove an internal entity, remove its internal flag first.</p>
 	 * @param comparator the matching criteria
 	 */
 	public void clear(Predicate<T> comparator)
@@ -267,7 +282,7 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 		while( values.hasNext() )
 		{
 			T entity = values.next();
-			if( entity == null ) continue;
+			if( entity == null || entity.internal() ) continue;
 			if( comparator.test(entity) )
 			{
 				values.remove();

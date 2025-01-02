@@ -1,6 +1,7 @@
 package aeonics.manager;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -8,7 +9,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import aeonics.entity.Origin;
+import aeonics.entity.Step.Origin;
 import aeonics.template.Factory;
 import aeonics.template.Template;
 import aeonics.util.Internal;
@@ -49,6 +50,16 @@ public abstract class Executor extends Manager.Type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> priorityResolved(T value);
+	
+	/**
+	 * Create a pending task that is not scheduled to run and must be resolved manually.
+	 * Dependent tasks will execute as a priority task.
+	 * @see Task#complete(Object)
+	 * @see Task#fail(Exception)
+	 * @param <T> the task return type
+	 * @return the task object to eventually chain operations
+	 */
+	public abstract <T> Task<T> priorityPending();
 	
 	/**
 	 * Create a failed priority task. 
@@ -105,6 +116,16 @@ public abstract class Executor extends Manager.Type
 	public abstract <T> Task<T> normalResolved(T value);
 	
 	/**
+	 * Create a pending task that is not scheduled to run and must be resolved manually.
+	 * Dependent tasks will execute as a normal task.
+	 * @see Task#complete(Object)
+	 * @see Task#fail(Exception)
+	 * @param <T> the task return type
+	 * @return the task object to eventually chain operations
+	 */
+	public abstract <T> Task<T> normalPending();
+	
+	/**
 	 * Create a failed normal task. 
 	 * @param error the cause of failure
 	 * @return the task object to eventually chain operations
@@ -157,6 +178,16 @@ public abstract class Executor extends Manager.Type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> backgroundResolved(T value);
+	
+	/**
+	 * Create a pending task that is not scheduled to run and must be resolved manually.
+	 * Dependent tasks will execute as a background task.
+	 * @see Task#complete(Object)
+	 * @see Task#fail(Exception)
+	 * @param <T> the task return type
+	 * @return the task object to eventually chain operations
+	 */
+	public abstract <T> Task<T> backgroundPending();
 	
 	/**
 	 * Create a failed background task. 
@@ -212,6 +243,16 @@ public abstract class Executor extends Manager.Type
 	 * @return the task object to eventually chain operations
 	 */
 	public abstract <T> Task<T> ioResolved(T value);
+	
+	/**
+	 * Create a pending task that is not scheduled to run and must be resolved manually.
+	 * Dependent tasks will execute as an io task.
+	 * @see Task#complete(Object)
+	 * @see Task#fail(Exception)
+	 * @param <T> the task return type
+	 * @return the task object to eventually chain operations
+	 */
+	public abstract <T> Task<T> ioPending();
 	
 	/**
 	 * Create a failed io task. 
@@ -295,6 +336,14 @@ public abstract class Executor extends Manager.Type
 	protected static <U> Task<U> async(aeonics.util.Functions.Supplier<U> task, java.util.concurrent.Executor executor) { return Task.async(task, executor); }
 	
 	/**
+	 * Protected accessor to create a pending task that is not scheduled to run.
+	 * @param <U>the return type of the task
+	 * @param executor the executor in which the task should run
+	 * @return the task object to eventually chain or cancel operations
+	 */
+	protected static <U> Task<U> pending(java.util.concurrent.Executor executor) { return new Task<U>(null, executor); }
+	
+	/**
 	 * This class represents a task that is running, is done or will run in the future.
 	 * It is a simplified wrapper around {@link CompletableFuture} designed to be used by the Executor implementations.
 	 * @param <T> the return type of the task
@@ -328,7 +377,7 @@ public abstract class Executor extends Manager.Type
 		 */
 		@Internal
 		public static Task<Void> unknown() { return new Task<Void>(CompletableFuture.completedFuture(null)); }
-		
+
 		/**
 		 * Returns an already failed task.
 		 * @param value the failure cause
@@ -453,7 +502,7 @@ public abstract class Executor extends Manager.Type
 		 * @param future the internal future
 		 * @param executor the task executor
 		 */
-		private Task(CompletableFuture<T> future, java.util.concurrent.Executor executor) { this.executor = executor; this.future = future; }
+		private Task(CompletableFuture<T> future, java.util.concurrent.Executor executor) { this.executor = executor; this.future = Objects.requireNonNullElseGet(future, () -> new CompletableFuture<>()); }
 		
 		/**
 		 * Schedules another task to run upon successful completion of this task
@@ -670,6 +719,18 @@ public abstract class Executor extends Manager.Type
 		 * This method applies to this task only and not the parent tasks.
 		 */
 		public void cancel() { future.cancel(true); }
+		
+		/**
+		 * Forces the completion of this task with the provided value.
+		 * @param value the success value
+		 */
+		public void complete(T value) { future.complete(value); }
+		
+		/**
+		 * Forces the failure of this task with the provided error
+		 * @param e the failure cause
+		 */
+		public void fail(Exception e) { future.completeExceptionally(e); }
 	}
 
 	/**
@@ -681,6 +742,7 @@ public abstract class Executor extends Manager.Type
 		{
 			public <T> Task<T> priority(aeonics.util.Functions.Supplier<T> task) { return normal(task); }
 			public <T> Task<T> priorityResolved(T value) { return normalResolved(value); }
+			public <T> Task<T> priorityPending() { return pending(null); }
 			public Task<Void> priorityFailed(Throwable error) { return normalFailed(error); }
 			public Task<Void> priority(List<Task<?>> tasks) { return normal(tasks); }
 			public boolean isPriority(Thread thread) { return false; }
@@ -699,18 +761,21 @@ public abstract class Executor extends Manager.Type
 				}
 			}
 			public <T> Task<T> normalResolved(T value) { return completed(value, null); }
+			public <T> Task<T> normalPending() { return pending(null); }
 			public Task<Void> normalFailed(Throwable error) { return failed(error, null); }
 			public Task<Void> normal(List<Task<?>> tasks) { return all(tasks, null); }
 			public boolean isNormal(Thread thread) { return true; }
 
 			public <T> Task<T> background(aeonics.util.Functions.Supplier<T> task) { return normal(task); }
 			public <T> Task<T> backgroundResolved(T value) { return normalResolved(value); }
+			public <T> Task<T> backgroundPending() { return pending(null); }
 			public Task<Void> backgroundFailed(Throwable error) { return normalFailed(error); }
 			public Task<Void> background(List<Task<?>> tasks) { return normal(tasks); }
 			public boolean isBackground(Thread thread) { return false; }
 			
 			public <T> Task<T> io(aeonics.util.Functions.Supplier<T> task) { return normal(task); }
 			public <T> Task<T> ioResolved(T value) { return normalResolved(value); }
+			public <T> Task<T> ioPending() { return pending(null); }
 			public Task<Void> ioFailed(Throwable error) { return normalFailed(error); }
 			public Task<Void> io(List<Task<?>> tasks) { return normal(tasks); }
 			public boolean isIo(Thread thread) { return false; }

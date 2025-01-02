@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import aeonics.Plugin;
-import aeonics.entity.Origin;
+import aeonics.entity.Step.Origin;
 import aeonics.template.Factory;
 import aeonics.template.Template;
 import aeonics.util.Callback;

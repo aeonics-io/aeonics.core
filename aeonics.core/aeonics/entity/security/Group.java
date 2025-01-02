@@ -10,6 +10,7 @@ import aeonics.template.Parameter;
 import aeonics.template.Relationship;
 import aeonics.template.Template;
 import aeonics.util.Json;
+import aeonics.util.Snapshotable.SnapshotMode;
 import aeonics.util.StringUtils;
 
 /**
@@ -19,9 +20,9 @@ import aeonics.util.StringUtils;
 public class Group extends Item<Group.Type>
 {
 	public static final Group.Type ADMINISTRATORS = new Group().template().create(Data.map().put("id", "10000000-1800000000000000"))
-		.name("Administrators").internal(true).addRelation("roles", Role.SUPERADMIN).cast();
+		.name("Administrators").internal(true).snapshotMode(SnapshotMode.UPDATE).addRelation("roles", Role.SUPERADMIN).cast();
 	public static final Group.Type USERS = new Group().template().create(Data.map().put("id", "10000000-1900000000000000"))
-		.name("Users").internal(true);
+		.name("Users").internal(true).snapshotMode(SnapshotMode.UPDATE);
 	
 	/**
 	 * Superclass for all group entities.
@@ -57,6 +58,6 @@ public class Group extends Item<Group.Type>
 				.category(Role.class)
 				.summary("Roles")
 				.description("List of roles that apply to all users in this group."))
-			.icon("group");
+			;
 	}
 }

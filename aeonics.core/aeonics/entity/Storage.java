@@ -409,7 +409,7 @@ public abstract class Storage extends Item<Storage.Type>
 					.format(Parameter.Format.TEXT)
 					.optional(true)
 					.defaultValue(""))
-				.icon("folder");
+				;
 		}
 	}
 	
@@ -511,7 +511,7 @@ public abstract class Storage extends Item<Storage.Type>
 			return (Template<Memory.Type>) super.template()
 				.summary("Memory storage")
 				.description("This storage is non-persistent as it stores content directly in the heap memory of the application. However, it is the fastest to read and write data.")
-				.icon("memory");
+				;
 		}
 	}
 	
@@ -1068,7 +1068,7 @@ public abstract class Storage extends Item<Storage.Type>
 					.rule(Parameter.Rule.INTEGER)
 					.defaultValue(-1)
 					.optional(true))
-				.icon("database");
+				;
 		}
 	}
 }

@@ -5,6 +5,7 @@ import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.template.Item;
 import aeonics.template.Template;
+import aeonics.util.Snapshotable;
 import aeonics.util.Functions.Supplier;
 
 /**
@@ -53,6 +54,11 @@ public class Probe extends Item<Probe.Type>
 		 * A probe is always internal
 		 */
 		public boolean internal() { return true; }
+		
+		/**
+		 * Probes are not included in snapshots
+		 */
+		public Snapshotable.SnapshotMode snapshotMode() { return SnapshotMode.NONE; }
 	}
 	
 	protected Class<? extends Probe.Type> defaultTarget() { return Probe.Type.class; }
@@ -66,6 +72,6 @@ public class Probe extends Item<Probe.Type>
 		return (Template<Probe.Type>) super.template()
 			.summary("Probe")
 			.description("This entity provides probe data.")
-			.icon("monitor_heart");
+			;
 	}
 }

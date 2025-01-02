@@ -31,12 +31,6 @@ public abstract class Rule extends Item<Rule.Type>
 		public final String category() { return StringUtils.toLowerCase(Rule.class); }
 	}
 	
-	public Template<? extends Type> template()
-	{
-		return super.template()
-			.icon("rule");
-	}
-	
 	protected Class<? extends Rule> category() { return Rule.class; }
 	
 	// =========================================

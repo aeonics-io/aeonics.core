@@ -15,6 +15,7 @@ import aeonics.manager.Manager;
 import aeonics.manager.Translator;
 import aeonics.manager.Vault;
 import aeonics.util.Documented;
+import aeonics.util.Exportable;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
 
@@ -221,7 +222,11 @@ public class Parameter implements Documented
 					catch(Exception e) { matcher.appendReplacement(sb, ""); }
 					break;
 				case "context":
-					try { matcher.appendReplacement(sb, context != null ? Matcher.quoteReplacement(context.getNested(name).asString()) : ""); }
+					try
+					{
+						if( context != null && context.is(Exportable.class) ) context = ((Exportable)context).export();
+						matcher.appendReplacement(sb, context != null ? Matcher.quoteReplacement(context.getNested(name).asString()) : "");
+					}
 					catch(Exception e) { matcher.appendReplacement(sb, ""); }
 					break;
 				case "secret":

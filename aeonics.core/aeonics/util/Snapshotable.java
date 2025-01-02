@@ -7,25 +7,56 @@ import aeonics.template.Factory;
 import aeonics.template.Template;
 
 /**
- * Make a class serializable to a JSON-like {@link Data} structure to be used in the snapshot / restore mechanism.
- * Although nothing prevents complex objects to be included in the export, it is recommended to only include scalar / list / map values.
- * 
- * <p>The intent of this interface is to backup an {@link Entity} to stale data and be able to restore it later.
- * To that extent, it is undoubtedly a form of serialization into a human-readable format.</p>
- * 
- * <p>Undernormal circumstances, the snapshot and restore behavior should be orchestrated by the {@link Snapshot} manager.
- * The restore mechanism shall reuse the {@link Factory#create(Data)} method. This means that the snapshot data must
- * comply with the {@link Template#create(Data)} entity creation mechanism.</p>
- * 
- * <p>You <b>may</b> include private data in the snapshot form as it is not intended to be visible by the user.
- * The privacy and security of the snapshot data depends on the implementation of the snapshot manager.</p>
+ * Make an {@link Entity} serializable to a JSON-like {@link Data} structure to be used in the snapshot/restore mechanism.
+ * This mechanism allows an {@link Entity} to be backed up as a stale data structure and restored at a later time.
+ *
+ * <p>Although complex objects can technically be included in the snapshot, it is recommended to use simple scalar, list, or map values
+ * to maintain portability and ensure compatibility with various snapshot consumers.</p>
+ *
+ * <p>The privacy and security of the snapshot data rely on the implementation of the {@link Snapshot} manager, which controls access to snapshots.
+ * Sensitive private data may be included in snapshots, so careful consideration should be given to data encryption or restricted access in sensitive contexts.</p>
+ *
+ * <p>The snapshot and restore behavior should typically be orchestrated by the {@link Snapshot} manager using either
+ * {@link Factory#create(Data)} for full restoration or {@link Template#update(Data, Entity)} for incremental updates.</p>
  */
 public interface Snapshotable 
 {
 	/**
-	 * Renders this class instance to a simple data structure for snapshot.
-	 * It is recommended to call the superclass implementation and append to it if necessary.
+	 * Serializes this class instance into a simple data structure for use in snapshots.
+	 * If subclassing, ensure that data from the superclass is included in the resulting {@link Data}.
+	 *
 	 * @return a snapshot data representation of this class instance
 	 */
 	public Data snapshot();
+	
+	/**
+     * Returns the intended snapshot mode suitable for the target entity.
+     *
+     * @return the desired snapshot mode
+     */
+	public SnapshotMode snapshotMode();
+	
+	/**
+	 * Defines the behavior of entities during snapshot and restore operations.
+	 */
+	public enum SnapshotMode
+	{
+	    /**
+	     * The entity will be fully serialized and restored using {@link Template#create(Data)}.
+	     * Suitable for entities that need complete reinitialization during restore.
+	     */
+	    FULL,
+
+	    /**
+	     * The entity will be excluded from snapshots entirely and will not be restored.
+	     * Suitable for transient or runtime-only entities.
+	     */
+	    NONE,
+
+	    /**
+	     * The entity will be serialized and updated using {@link Template#update(Data, Entity)}.
+	     * Suitable for entities that should retain their existing identity but need updated state.
+	     */
+	    UPDATE
+	}
 }

@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import aeonics.entity.Entity;
 import aeonics.template.Item;
+import aeonics.util.Snapshotable;
 import aeonics.util.StringUtils;
 
 /**
@@ -117,10 +118,16 @@ public abstract class Manager<T extends Manager.Type> extends Item<T>
 	public abstract static class Type extends Entity
 	{
 		/**
-		 * Hardcoded interal value to <code>true</code>
+		 * Hardcoded internal value to <code>true</code>
 		 */
 		@Override
 		public boolean internal() { return true; }
+		
+		/**
+		 * Hardcoded snapshot mode value to <code>NONE</code>
+		 */
+		@Override
+		public Snapshotable.SnapshotMode snapshotMode() { return SnapshotMode.NONE; }
 		
 		/**
 		 * Hardcoded category to the {@link Manager} class

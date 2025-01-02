@@ -10,6 +10,7 @@ import aeonics.template.Parameter;
 import aeonics.template.Template;
 import aeonics.util.Json;
 import aeonics.util.StringUtils;
+import aeonics.util.Snapshotable.SnapshotMode;
 
 /**
  * This item plays a role in the definition of the {@link Security}.
@@ -19,7 +20,8 @@ import aeonics.util.StringUtils;
  */
 public class Role extends Item<Role.Type>
 {
-	public static final Role.Type SUPERADMIN = new Role().template().create(Data.map().put("id", "10000000-1300000000000000")).name("SUPERADMIN").internal(true);
+	public static final Role.Type SUPERADMIN = new Role().template().create(Data.map().put("id", "10000000-1300000000000000"))
+		.name("SUPERADMIN").internal(true).snapshotMode(SnapshotMode.UPDATE);
 	
 	/**
 	 * Superclass for all role entities.
@@ -51,6 +53,6 @@ public class Role extends Item<Role.Type>
 				.optional(true)
 				.defaultValue(Data.map())
 				.validator((v) -> v != null && (v.isMap() || Json.decode(v.asString()).isMap())))
-			.icon("badge");
+			;
 	}
 }

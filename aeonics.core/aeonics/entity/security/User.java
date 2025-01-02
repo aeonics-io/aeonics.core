@@ -12,6 +12,7 @@ import aeonics.template.Relationship;
 import aeonics.template.Template;
 import aeonics.util.Json;
 import aeonics.util.StringUtils;
+import aeonics.util.Snapshotable.SnapshotMode;
 import aeonics.util.Tuples.Tuple;
 
 /**
@@ -42,8 +43,10 @@ import aeonics.util.Tuples.Tuple;
  */
 public class User extends Item<User.Type>
 {
-	public static final User.Type ANONYMOUS = new User().template().create(Data.map().put("id", "10000000-1100000000000000")).name("ANONYMOUS").internal(true);
-	public static final User.Type SYSTEM = new User().template().create(Data.map().put("id", "10000000-1200000000000000")).name("SYSTEM").internal(true);
+	public static final User.Type ANONYMOUS = new User().template().create(Data.map().put("id", "10000000-1100000000000000"))
+		.name("ANONYMOUS").internal(true).snapshotMode(SnapshotMode.UPDATE);
+	public static final User.Type SYSTEM = new User().template().create(Data.map().put("id", "10000000-1200000000000000"))
+		.name("SYSTEM").internal(true).snapshotMode(SnapshotMode.UPDATE);
 	
 	/**
 	 * Superclass for all user entities.
@@ -178,6 +181,6 @@ public class User extends Item<User.Type>
 				.category(Group.class)
 				.summary("Groups")
 				.description("List of user groups."))
-			.icon("person");
+			;
 	}
 }

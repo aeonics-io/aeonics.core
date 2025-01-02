@@ -4,10 +4,12 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import aeonics.data.Data;
+import aeonics.entity.Step.Origin;
 import aeonics.entity.security.User;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.template.Channel;
+import aeonics.util.Snapshotable.SnapshotMode;
 
 /**
  * This class can be used from anywhere in the system to send troubleshooting information to be processed as data.
@@ -21,10 +23,10 @@ public class Debug
 		// calling this method will force initialization of all private static members
 	}
 	
-	private static final class _Debug extends Origin.Basic.Type
+	private static final class _Debug extends Origin.Type
 	{
 		@Override
-		public void emit(Message message, String channel)
+		public void produce(Message message, String channel)
 		{
 			if( message == null ) return;
 			if( !started() ) start();
@@ -33,29 +35,22 @@ public class Debug
 			if( message.metadata().asBool("discarded") || message.metadata().asBool("debug") ) return;
 			message.metadata().put("debug", true);
 			
-			super.emit(message, channel);
+			super.produce(message, channel);
 		}
 	}
 	
-	private static final Origin.Type DEBUG = new Origin.Basic() { }
+	private static final _Debug DEBUG = new Origin() { }
 		.target(_Debug.class)
 		.creator(_Debug::new)
 		.template()
+		.<Step.Template>cast().icon("bug_report")
+		.output(new Channel("data").summary("Debug").description("Debug information sent from the system"))
 		.summary("Debug")
-		.description("This data origin is used as a common central debug point. It publishes in the internal 'debug' topic.")
-		.icon("bug_report")
-		.<Origin.Template>cast()
-		.output(new Channel("data")
-			.summary("Data")
-			.description("All messages are published through this channel"))
+		.description("This data origin is used as a common central debug point.")
 		.create(Data.map().put("id", "10000000-1400000000000000"))
-		.addRelation("topics", new Topic()
-			.template()
-			.create(Data.map().put("id", "10000000-1500000000000000"))
-			.name("debug")
-			.internal(true), Data.map().put("output", "data"))
 		.name("Debug")
 		.internal(true)
+		.snapshotMode(SnapshotMode.UPDATE)
 		;
 	
 	/**
@@ -69,7 +64,7 @@ public class Debug
 		m.user(User.SYSTEM.id());
 		m.content(Data.map().put("stack", getStackTrace()).put("values", values));
 		
-		DEBUG.emit(m, "data");
+		DEBUG.produce(m, "data");
 	}
 	
 	/**
@@ -83,7 +78,7 @@ public class Debug
 		m.user(User.SYSTEM.id());
 		m.content(Data.map().put("values", values));
 		
-		DEBUG.emit(m, "data");
+		DEBUG.produce(m, "data");
 	}
 	
 	/**
@@ -96,7 +91,7 @@ public class Debug
 		m.user(User.SYSTEM.id());
 		m.content(Data.map().put("stack", getStackTrace()));
 		
-		DEBUG.emit(m, "data");
+		DEBUG.produce(m, "data");
 	}
 	
 	private static Data getStackTrace()

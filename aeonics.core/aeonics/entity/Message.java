@@ -110,12 +110,14 @@ public class Message implements Exportable
 	public Message connection(Network.Connection value) { connection = new WeakReference<Network.Connection>(value); return this; }
 	
 	/**
-	 * Creates a new message with the provided binding key
+	 * Creates a new message with the provided binding key.
+	 * The default metadata ttl is fixed to 20 hops.
 	 * @param key the message binding key
 	 */
 	public Message(String key)
 	{
 		key(key);
+		metadata().put("ttl", 20);
 	}
 	
 	/**
@@ -124,7 +126,7 @@ public class Message implements Exportable
 	 */
 	private Message(Message copy)
 	{
-		key(copy.key());
+		this(copy.key());
 		user(copy.user());
 		connection(connection());
 		content(copy.content().clone());
@@ -137,7 +139,7 @@ public class Message implements Exportable
 	 */
 	private Message(Data export)
 	{
-		key(export.asString("key"));
+		this(export.asString("key"));
 		user(export.isNull("user") ? null : export.asString("user"));
 		content(export.get("content"));
 		export.get("metadata").cloneTo(metadata());

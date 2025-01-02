@@ -1,8 +1,8 @@
 package aeonics.template;
 
-import aeonics.entity.Action;
-import aeonics.entity.Destination;
-import aeonics.entity.Origin;
+import aeonics.entity.Step.Action;
+import aeonics.entity.Step.Destination;
+import aeonics.entity.Step.Origin;
 import aeonics.util.Documented;
 
 /**

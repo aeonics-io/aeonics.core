@@ -1,8 +1,10 @@
 package aeonics.entity;
 
 import aeonics.data.Data;
+import aeonics.entity.Step.Origin;
 import aeonics.entity.security.User;
 import aeonics.template.Channel;
+import aeonics.util.Snapshotable.SnapshotMode;
 
 /**
  * This class is a specialized form of {@link Origin} entity.
@@ -50,10 +52,10 @@ public class Discard
 		POLICY
 	}
 	
-	private static final class _Discard extends Origin.Basic.Type
+	private static final class _Discard extends Origin.Type
 	{
 		@Override
-		public void emit(Message message, String channel)
+		public void produce(Message message, String channel)
 		{
 			if( message == null ) return;
 			if( !started() ) start();
@@ -62,29 +64,22 @@ public class Discard
 			if( message.metadata().asBool("discarded") || message.metadata().asBool("debug") ) return;
 			message.metadata().put("discarded", true);
 			
-			super.emit(message, channel);
+			super.produce(message, channel);
 		}
 	}
 	
-	private static final Origin.Type DISCARD = new Origin.Basic() { }
+	private static final _Discard DISCARD = new Origin() { }
 		.target(_Discard.class)
 		.creator(_Discard::new)
 		.template()
+		.<Step.Template>cast().icon("delete")
+		.output(new Channel("data").summary("Data").description("Discarded data that has been ignored by other entities"))
 		.summary("Discard")
 		.description("This data origin is used as a last resort for all discarded messages. It publishes in the internal 'discard' topic.")
-		.icon("delete")
-		.<Origin.Template>cast()
-		.output(new Channel("data")
-			.summary("Data")
-			.description("All messages are published through this channel"))
 		.create(Data.map().put("id", "10000000-1600000000000000"))
-		.addRelation("topics", new Topic()
-			.template()
-			.create(Data.map().put("id", "10000000-1700000000000000"))
-			.name("discard")
-			.internal(true), Data.map().put("output", "data"))
 		.name("Discard")
-		.internal(true);
+		.internal(true)
+		.snapshotMode(SnapshotMode.UPDATE);
 	
 	/**
 	 * Handle an expired message.
@@ -154,6 +149,6 @@ public class Discard
 		message.metadata().put("discard_topic", message.metadata().asString("topic"));
 		message.user(User.SYSTEM.id());
 
-		DISCARD.emit(message, "data");
+		DISCARD.produce(message, "data");
 	}
 }

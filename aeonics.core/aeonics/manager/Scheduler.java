@@ -21,6 +21,7 @@ import aeonics.entity.Entity;
 import aeonics.entity.Registry;
 import aeonics.template.Item;
 import aeonics.util.Internal;
+import aeonics.util.Snapshotable;
 import aeonics.util.StringUtils;
 
 /**
@@ -53,6 +54,12 @@ public abstract class Scheduler extends Manager.Type
 			 */
 			@Override
 			public boolean internal() { return true; }
+			
+			/**
+			 * Cron tasks are not included in snapshots by default
+			 */
+			@Override
+			public Snapshotable.SnapshotMode snapshotMode() { return SnapshotMode.NONE; }
 			
 			/**
 			 * This method will be called by the scheduler when the tasks should run.

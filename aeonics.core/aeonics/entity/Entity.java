@@ -143,24 +143,25 @@ public class Entity implements Exportable, Snapshotable
 	
 	/**
 	 * Whether or not this entity is internal to the system.
+	 * Internal entities cannot be removed from the {@link Registry}.
 	 */
 	private boolean internal = false;
 	
 	/**
-	 * Returns whether or not this entity is considered internal to the system. Internal entities are not serialized in case of a snapshot.
+	 * Returns whether or not this entity is considered internal to the system.
+	 * Internal entities cannot be removed from the {@link Registry}.
 	 * @return whether or not this entity is internal
 	 */
 	public boolean internal() { return internal; }
 	
 	/**
-	 * Sets whether or not this entity is considered internal to the system. Internal entities are not serialized in case of a snapshot.
+	 * Sets whether or not this entity is considered internal to the system.
+	 * Internal entities cannot be removed from the {@link Registry}.
 	 * @param <T> this
 	 * @param value whether or not this entity is internal
 	 * @return this
-	 * @hidden
 	 */
 	@SuppressWarnings("unchecked")
-	@Internal
 	public <T extends Entity> T internal(boolean value) { internal = value; return (T) this; }
 	
 	/**
@@ -240,13 +241,19 @@ public class Entity implements Exportable, Snapshotable
 	}
 	
 	/**
-	 * Returns the value of the specified parameter without any contextual information.
+	 * Returns the current context
+	 * @return the current context
+	 */
+	protected Data context() { return context == null ? null : context.get(); }
+	
+	/**
+	 * Returns the value of the specified parameter using the current {@link #context()} information.
 	 * @param parameter the parameter name
 	 * @return the parameter value or an empty data if the parameter value is not set or the parameter does not exist for this entity.
 	 */
 	public Data valueOf(String parameter)
 	{
-		return valueOf(parameter, null);
+		return valueOf(parameter, context());
 	}
 	
 	/**
@@ -597,7 +604,7 @@ public class Entity implements Exportable, Snapshotable
 		Data d = Data.map()
 			.put("id", id())
 			.put("name", name())
-			.put("internal", internal())
+			//.put("internal", internal())
 			.put("category", category())
 			.put("type", type())
 			.put("class", getClass().getName())
@@ -621,6 +628,41 @@ public class Entity implements Exportable, Snapshotable
 	}
 	
 	/**
+	 * Default snapshot mode is FULL
+	 */
+	private Snapshotable.SnapshotMode snapshotMode = Snapshotable.SnapshotMode.FULL;
+	
+	/**
+	 * Returns whether or not this entity should be included in snapshots.
+	 * This is different from {@link #internal()} in that this entity will be totally omitted if false.
+	 * <p>This method returns true by default.</p>
+	 * @return true if this entity should be included in snapshots.
+	 */
+	public Snapshotable.SnapshotMode snapshotMode() { return snapshotMode; }
+	
+	/**
+	 * Sets the snapshot mode for this entity.
+	 * @param <T> this entity type
+	 * @param value the snapshot mode
+	 * @return this
+	 * @hidden
+	 */
+	@SuppressWarnings("unchecked")
+	@Internal
+	public <T extends Entity> T snapshotMode(Snapshotable.SnapshotMode value) { snapshotMode = value; return (T) this; }
+	
+	/**
+	 * Sets the snapshot mode for this entity.
+	 * @param <T> this entity type
+	 * @param value the snapshot mode
+	 * @return this
+	 * @hidden
+	 */
+	@SuppressWarnings("unchecked")
+	@Internal
+	public <T extends Entity> T snapshotMode(String value) { snapshotMode = Snapshotable.SnapshotMode.valueOf(value); return (T) this; }
+	
+	/**
 	 * The default entity snapshot implementation includes the required metadata fields
 	 * to be used by the {@link Template} to restore it. It also includes all declared
 	 * {@link #parameters()} and all declared {@link #relationships()}.
@@ -634,34 +676,44 @@ public class Entity implements Exportable, Snapshotable
 	 * the rest of the system.</p>
 	 * 
 	 * <p>In order to safeguard the potentially private or confidential data returned by this method out of necessity,
-	 * a check on the caller is performed to allow only the current {@link Snapshot} implementation.</p>
+	 * a check on the caller is performed to allow only the current {@link Snapshot} implementation to call this method.</p>
 	 */
 	public Data snapshot()
 	{
 		CheckCaller.require(Manager.of(Snapshot.class).getClass(), null);
 		
-		Data d = Data.map()
-			.put("id", id())
-			.put("name", name())
-			.put("internal", internal())
-			.put("category", category())
-			.put("type", type())
-			.put("class", getClass().getName())
-			.put("plugin", getClass().getModule().getName());
+		Data d = Data.map().put("id", id()).put("category", category()).put("type", type()).put("mode", snapshotMode());
 		
-		Data p = Data.map();
-		for( Tuple<Data, Parameter> t : parameters.values() )
-			p.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
-		d.put("parameters", p);
-		
-		Data r = Data.map();
-		for( Tuple<List<Data>, Relationship> t : relationships.values() )
+		switch(snapshotMode())
 		{
-			Data l = Data.list();
-			for( Data x : t.a ) l.add(x);
-			r.put(t.b.name(), l);
+			case FULL:
+			{
+				d.put("name", name())
+				//.put("internal", internal())
+				.put("class", getClass().getName())
+				.put("plugin", getClass().getModule().getName());
+			}
+			case UPDATE:
+			{
+				Data p = Data.map();
+				for( Tuple<Data, Parameter> t : parameters.values() )
+					p.put(t.b.name(), t.a == null ? t.b.defaultValue() : t.a);
+				d.put("parameters", p);
+				
+				Data r = Data.map();
+				for( Tuple<List<Data>, Relationship> t : relationships.values() )
+				{
+					Data l = Data.list();
+					for( Data x : t.a ) l.add(x);
+					r.put(t.b.name(), l);
+				}
+				d.put("relationships", r);
+			}
+			case NONE:
+			{
+				break;
+			}
 		}
-		d.put("relationships", r);
 		
 		return d;
 	}

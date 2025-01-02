@@ -863,6 +863,7 @@ public class Database extends Item<Database.Type>
 	public Template<? extends Database.Type> template()
 	{
 		return super.template()
+			.cast()
 			.summary("SQL Database")
 			.description("This entity type provides database connectivity through standard JDBC connections using an internal connection pool.")
 			.add(new Parameter("size")
@@ -895,14 +896,13 @@ public class Database extends Item<Database.Type>
 			.onCreate((data, instance) ->
 			{
 				if( data.get("parameters").containsKey("size") )
-					instance.refreshPoolSize();
+					((Database.Type)instance).refreshPoolSize();
 			})
 			.onUpdate((data, instance) ->
 			{
 				if( data.get("parameters").containsKey("size") )
-					instance.refreshPoolSize();
+					((Database.Type)instance).refreshPoolSize();
 			})
-			.icon("database")
-			;
+			.cast();
 	}
 }

@@ -17,6 +17,7 @@ import aeonics.util.Callback;
 import aeonics.util.Documented;
 import aeonics.util.Functions.BiConsumer;
 import aeonics.util.Json;
+import aeonics.util.Snapshotable.SnapshotMode;
 import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
 
@@ -291,25 +292,6 @@ public class Template<T extends Entity> implements Documented
 	 */
 	public <U extends Template<T>> U summary(String value) { summary = value; return (U) this; }
 	
-	/** 
-	 * The template icon 
-	 */
-	private String icon = null;
-	
-	/**
-	 * Returns the name of the icon used to render this template visually.
-	 * @return the icon name
-	 */
-	public String icon() { return icon; }
-	
-	/**
-	 * Sets the name of the icon used to render this template visually.
-	 * @param <U> the template type
-	 * @param value the icon
-	 * @return this
-	 */
-	public <U extends Template<T>> U icon(String value) { icon = value; return (U) this; }
-	
 	/**
 	 * The target entity description
 	 */
@@ -384,6 +366,9 @@ public class Template<T extends Entity> implements Documented
 	public T create(Data data)
 	{
 		if( data == null ) data = Data.map();
+		
+		if( data.containsKey("mode") && SnapshotMode.FULL != SnapshotMode.valueOf(data.asString("mode")) )
+			throw new RuntimeException("Incompatible snapshot mode");
 		
 		if( data.containsKey("category") && !category().equals(data.asString("category")) )
 			throw new RuntimeException("Entity category mismatch");
@@ -604,7 +589,6 @@ public class Template<T extends Entity> implements Documented
 		}
 		
 		return Documented.super.export()
-			.put("icon", icon())
 			.put("type_plugin", type().getModule().getName())
 			.put("target_plugin", target().getModule().getName())
 			.put("parameters", p)

@@ -1,40 +1,24 @@
 package aeonics.entity;
 
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import aeonics.entity.Step.Action;
 import aeonics.manager.Executor;
 import aeonics.manager.Executor.Task;
-import aeonics.manager.Logger;
 import aeonics.manager.Manager;
-import aeonics.manager.Monitor;
-import aeonics.template.Item;
+import aeonics.template.Channel;
 import aeonics.template.Parameter;
-import aeonics.template.Relationship;
-import aeonics.template.Template;
-import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
 
 /**
  * This class represents a queue that can subscribe to one or more topics.
- * <p>The queue will send messages to the related {@link Action} and {@link Destination} based
- * on the different parameters and policy.</p>
+ * <p>The queue will deliver downstream messages based on the different parameters and policy.</p>
  */
-public class Queue extends Item<Queue.Type>
+public class Queue extends Action
 {
-	// TODO : Retry (with delay), and add a FIFO property to unshift or push the message
-	// the FIFO can be used whenever a message is delayed
-	
 	/**
 	 * This is the default entity to manage the orchestration of the different messages.
 	 * While all steps are naturally queued by the {@link Executor}, this instance
@@ -42,7 +26,7 @@ public class Queue extends Item<Queue.Type>
 	 * 
 	 * Incoming messages are processed entirely before starting the next (depending on the concurrency).
 	 */
-	public static class Type extends Entity implements Consumer<Message>
+	public static class Type extends Action.Type
 	{
 		/**
 		 * Matches the parameter but already parsed for performance reasons
@@ -57,27 +41,29 @@ public class Queue extends Item<Queue.Type>
 		/**
 		 * Internal queue
 		 */
-		private Deque<Message> queue = new ConcurrentLinkedDeque<>();
+		private Deque<Tuple<Message, Task<Void>>> queue = new ConcurrentLinkedDeque<>();
 		
-		public void accept(Message message)
+		/**
+		 * Override the default accept action to queue messages
+		 */
+		Task<Void> acceptAction(Message message, String input)
 		{
 			if( concurrency <= 0 )
-				next(message);
+				return super.acceptAction(message, input);
 			
-			try
+			Tuple<Message, Task<Void>> job = Tuple.of(message, Manager.of(Executor.class).normalPending());
+			synchronized(this)
 			{
 				if( limit > 0 && queue.size() >= limit )
 				{
-					Discard.policy(message, "Queue size exceeded");
-					return;
+					message.metadata().put("error", new IllegalStateException("Queue size exceeded"));
+					return emit(message, "error");
 				}
-				queue.offer(message);
-				while( checkNext() ) ;
+				queue.offer(job);
 			}
-			catch(Throwable e)
-			{
-				Discard.error(message, e);
-			}
+			
+			while( checkNext() ) ;
+			return job.b;
 		}
 		
 		/**
@@ -99,183 +85,38 @@ public class Queue extends Item<Queue.Type>
 				if( parallel.compareAndSet(current, current + 1) ) break;
 			}
 			
-			Message message = queue.poll();
-			if( message == null )
+			Tuple<Message, Task<Void>> job = queue.poll();
+			if( job == null )
 			{
 				parallel.decrementAndGet();
 				return false;
 			}
 			
-			next(message).then(() ->
+			emit(job.a, "data").anyway(() ->
 			{
 				parallel.decrementAndGet();
+				job.b.complete(null);
 				while( checkNext() ) ;
 			});
 			
 			return true;
 		}
-		
-		/**
-		 * Prepares delivery of the specified message to all actions and destinations bound to this queue.
-		 * @param message the message to deliver
-		 * @return the task object that completes when the message has been fully processed
-		 */
-		private Task<Void> next(Message message)
-		{
-			Manager.of(Monitor.class).count(this);
-			
-			List<Tuple<Action.Type, String>> actions = new ArrayList<>();
-			List<Tuple<Destination.Type, String>> destinations = new ArrayList<>();
-			
-			relations("actions").forEach((t) ->
-			{
-				if( !(t.a instanceof Action.Type) )
-				{
-					Manager.of(Logger.class).config(getClass(), "Action {} configured in Queue {} does not exist.", t.b.asString("id"), id());
-					return;
-				}
-
-				actions.add(Tuple.of((Action.Type)t.a, t.b.asString("input")));
-			});
-			
-			relations("destinations").forEach((t) ->
-			{
-				if( !(t.a instanceof Destination.Type) )
-				{
-					Manager.of(Logger.class).config(getClass(), "Destination {} configured in Queue {} does not exist.", t.b.asString("id"), id());
-					return;
-				}
-				
-				destinations.add(Tuple.of((Destination.Type)t.a, t.b.asString("input")));
-			});
-			
-			// use this construct to clone the message only if necessary
-			
-			List<Task<?>> tasks = new LinkedList<>();
-			for( int i = actions.size()-1; i >= 0; i-- )
-			{
-				Tuple<Action.Type, String> t = actions.get(i);
-				tasks.add(next(i == 0 && destinations.isEmpty() ? message : message.clone(), t.a, t.b));
-			}
-			for( int i = destinations.size()-1; i >= 0; i-- )
-			{
-				Tuple<Destination.Type, String> t = destinations.get(i);
-				tasks.add(next(i == 0 ? message : message.clone(), t.a, t.b));
-			}
-			
-			return Manager.of(Executor.class).normal(tasks);
-		}
-		
-		/**
-		 * Runs the specified action and prepare the next steps
-		 * @param message the message to deliver
-		 * @param action the action to run
-		 * @param input the name of the input channel of the action
-		 * @return the task object that completes when the message has been fully processed
-		 */
-		private Task<Void> next(Message message, Action.Type action, String input)
-		{
-			return Manager.of(Executor.class).normal(() ->
-			{
-				Set<String> outputs = new HashSet<>();
-				action.relations("actions").forEach((t) -> { outputs.add(t.b.asString("output")); });
-				action.relations("destinations").forEach((t) -> { outputs.add(t.b.asString("output")); });
-				Manager.of(Monitor.class).count(action);
-				return action.accept(message, input, outputs);
-			})
-			.link((outputs) ->
-			{
-				// use this construct to clone the message only if necessary
-				Map<String, Tuple<List<Tuple<Destination.Type, String>>, List<Tuple<Action.Type, String>>>> nexts = new HashMap<>();
-				for( Map.Entry<String, Message> out : outputs.entrySet() )
-					if( out.getValue() != null )
-						nexts.put(out.getKey(), new Tuple<>(new ArrayList<>(), new ArrayList<>()));
-				
-				action.relations("actions").forEach((t) ->
-				{
-					if( !(t.a instanceof Action.Type) )
-					{
-						Manager.of(Logger.class).config(getClass(), "Action {} configured in Action {} for output {} does not exist.", t.b.asString("id"), action.id(), t.b.asString("output"));
-						return;
-					}
-					
-					Tuple<List<Tuple<Destination.Type, String>>, List<Tuple<Action.Type, String>>> valid = nexts.get(t.b.asString("output"));
-					if( valid != null ) valid.b.add(Tuple.of((Action.Type)t.a, t.b.asString("input")));
-				});
-				
-				action.relations("destinations").forEach((t) ->
-				{
-					if( !(t.a instanceof Destination.Type) )
-					{
-						Manager.of(Logger.class).config(getClass(), "Destination {} configured in Action {} for output {} does not exist.", t.b.asString("id"), action.id(), t.b.asString("output"));
-						return;
-					}
-					
-					Tuple<List<Tuple<Destination.Type, String>>, List<Tuple<Action.Type, String>>> valid = nexts.get(t.b.asString("output"));
-					if( valid != null ) valid.a.add(Tuple.of((Destination.Type)t.a, t.b.asString("input")));
-				});
-				
-				List<Task<?>> tasks = new LinkedList<>();
-				for( Map.Entry<String, Tuple<List<Tuple<Destination.Type, String>>, List<Tuple<Action.Type, String>>>> entry : nexts.entrySet() )
-				{
-					Message m = outputs.get(entry.getKey());
-					List<Tuple<Destination.Type, String>> destinations = entry.getValue().a;
-					List<Tuple<Action.Type, String>> actions = entry.getValue().b;
-					for( int i = actions.size()-1; i >= 0; i-- )
-					{
-						Tuple<Action.Type, String> t2 = actions.get(i);
-						tasks.add(next(i == 0 && destinations.isEmpty() ? m : m.clone(), t2.a, t2.b));
-					}
-					for( int i = destinations.size()-1; i >= 0; i-- )
-					{
-						Tuple<Destination.Type, String> t2 = destinations.get(i);
-						tasks.add(next(i == 0 ? m : m.clone(), t2.a, t2.b));
-					}
-				}
-				
-				return Manager.of(Executor.class).normal(tasks);
-			})
-			.or((e) ->
-			{
-				Discard.error(message, e);
-			});
-		}
-		
-		/**
-		 * Runs the specified destination
-		 * @param message the message to deliver
-		 * @param destination the destination to run
-		 * @param input the name of the input channel of the destination
-		 * @return the task object that completes when the message has been fully processed
-		 */
-		private Task<Void> next(Message message, Destination.Type destination, String input)
-		{
-			return Manager.of(Executor.class).normal(() ->
-			{
-				Manager.of(Monitor.class).count(destination);
-				destination.accept(message, input);
-			})
-			.or((e) ->
-			{
-				Discard.error(message, e);
-			});
-		} 
-		
-		/**
-		 * Hardcoded category to the {@link Queue} class
-		 */
-		@Override
-		public final String category() { return StringUtils.toLowerCase(Queue.class); }
 	}
 	
 	protected Class<? extends Queue.Type> defaultTarget() { return Queue.Type.class; }
 	protected Supplier<? extends Queue.Type> defaultCreator() { return Queue.Type::new; }
-	protected Class<? extends Queue> category() { return Queue.class; }
 
 	@Override
-	public Template<? extends Queue.Type> template()
+	public Template template()
 	{
 		return super.template()
+			.icon("stacks")
+			.input(new Channel("data")
+				.summary("Data")
+				.description("Enqueue a message."))
+			.output(new Channel("data")
+				.summary("Data")
+				.description("Dequeued messages."))
 			.summary("Queue")
 			.description("The queue will buffer messages in memory and process them according to the configured parameters.")
 			.add(new Parameter("limit")
@@ -301,22 +142,6 @@ public class Queue extends Item<Queue.Type>
 				.rule(Parameter.Rule.BOOLEAN)
 				.format(Parameter.Format.BOOLEAN)
 				.defaultValue(false))
-			.add(new Relationship("actions")
-				.category(Action.class)
-				.summary("Linked Actions")
-				.description("List of action entities that are directly connected to this queue.")
-				.add(new Parameter("input")
-					.summary("Input Channel")
-					.description("The name of the input channel to which this action is bound.")
-					.format(Parameter.Format.TEXT)))
-			.add(new Relationship("destinations")
-				.category(Destination.class)
-				.summary("Linked Destinations")
-				.description("List of destination entities that are directly connected to this queue.")
-				.add(new Parameter("input")
-					.summary("Input Channel")
-					.description("The name of the input channel to which this action is bound.")
-					.format(Parameter.Format.TEXT)))
 			.onCreate((data, instance) ->
 			{
 				((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
@@ -326,7 +151,6 @@ public class Queue extends Item<Queue.Type>
 			{
 				((Queue.Type)instance).concurrency = instance.valueOf("concurrency").asInt();
 				((Queue.Type)instance).limit = instance.valueOf("limit").asInt();
-			})
-			.icon("stacks");
+			});
 	}
 }
