@@ -1,5 +1,8 @@
 package aeonics.util;
 
+import java.util.Objects;
+import java.util.function.Predicate;
+
 /**
  * This collection of classes are extensions to the default <code>java.util.function</code> package.
  * All these interfaces allow throwing exceptions.
@@ -54,6 +57,82 @@ public class Functions
 		 * @throws Exception if an error happens
 		 */
 		public boolean test(A a) throws Exception;
+		
+		/**
+	     * Returns a composed predicate that represents a short-circuiting logical
+	     * OR of this predicate and another.  When evaluating the composed
+	     * predicate, if this predicate is {@code true}, then the {@code other}
+	     * predicate is not evaluated.
+	     *
+	     * <p>Any exceptions thrown during evaluation of either predicate are relayed
+	     * to the caller; if evaluation of this predicate throws an exception, the
+	     * {@code other} predicate will not be evaluated.
+	     *
+	     * @param other a predicate that will be logically-ORed with this
+	     *              predicate
+	     * @return a composed predicate that represents the short-circuiting logical
+	     * OR of this predicate and the {@code other} predicate
+	     * @throws NullPointerException if other is null
+	     */
+		default Predicate<A> or(Predicate<? super A> other)
+		{
+			Objects.requireNonNull(other);
+	        return (a) -> test(a) || other.test(a);
+		}
+		
+		/**
+	     * Returns a composed predicate that represents a short-circuiting logical
+	     * AND of this predicate and another.  When evaluating the composed
+	     * predicate, if this predicate is {@code false}, then the {@code other}
+	     * predicate is not evaluated.
+	     *
+	     * <p>Any exceptions thrown during evaluation of either predicate are relayed
+	     * to the caller; if evaluation of this predicate throws an exception, the
+	     * {@code other} predicate will not be evaluated.
+	     *
+	     * @param other a predicate that will be logically-ANDed with this
+	     *              predicate
+	     * @return a composed predicate that represents the short-circuiting logical
+	     * AND of this predicate and the {@code other} predicate
+	     * @throws NullPointerException if other is null
+	     */
+	    default Predicate<A> and(Predicate<? super A> other)
+	    {
+	        Objects.requireNonNull(other);
+	        return (a) -> test(a) && other.test(a);
+	    }
+
+	    /**
+	     * Returns a predicate that represents the logical negation of this
+	     * predicate.
+	     *
+	     * @return a predicate that represents the logical negation of this
+	     * predicate
+	     */
+	    default Predicate<A> negate()
+	    {
+	        return (a) -> !test(a);
+	    }
+	    
+	    /**
+	     * Returns a predicate that is the negation of the supplied predicate.
+	     * This is accomplished by returning result of the calling
+	     * {@code target.negate()}.
+	     *
+	     * @param <A>     the type of arguments to the specified predicate
+	     * @param target  predicate to negate
+	     *
+	     * @return a predicate that negates the results of the supplied
+	     *         predicate
+	     *
+	     * @throws NullPointerException if target is null
+	     */
+	    @SuppressWarnings("unchecked")
+	    static <A> Predicate<A> not(Predicate<? super A> target)
+	    {
+	        Objects.requireNonNull(target);
+	        return (Predicate<A>)target.negate();
+	    }
 	}
 	
 	/**
@@ -109,6 +188,83 @@ public class Functions
 		 * @throws Exception if an error happens
 		 */
 		public boolean test(A a, B b) throws Exception;
+		
+		/**
+	     * Returns a composed predicate that represents a short-circuiting logical
+	     * OR of this predicate and another.  When evaluating the composed
+	     * predicate, if this predicate is {@code true}, then the {@code other}
+	     * predicate is not evaluated.
+	     *
+	     * <p>Any exceptions thrown during evaluation of either predicate are relayed
+	     * to the caller; if evaluation of this predicate throws an exception, the
+	     * {@code other} predicate will not be evaluated.
+	     *
+	     * @param other a predicate that will be logically-ORed with this
+	     *              predicate
+	     * @return a composed predicate that represents the short-circuiting logical
+	     * OR of this predicate and the {@code other} predicate
+	     * @throws NullPointerException if other is null
+	     */
+		default BiPredicate<A, B> or(BiPredicate<? super A, ? super B> other)
+		{
+			Objects.requireNonNull(other);
+	        return (a, b) -> test(a, b) || other.test(a, b);
+		}
+		
+		/**
+	     * Returns a composed predicate that represents a short-circuiting logical
+	     * AND of this predicate and another.  When evaluating the composed
+	     * predicate, if this predicate is {@code false}, then the {@code other}
+	     * predicate is not evaluated.
+	     *
+	     * <p>Any exceptions thrown during evaluation of either predicate are relayed
+	     * to the caller; if evaluation of this predicate throws an exception, the
+	     * {@code other} predicate will not be evaluated.
+	     *
+	     * @param other a predicate that will be logically-ANDed with this
+	     *              predicate
+	     * @return a composed predicate that represents the short-circuiting logical
+	     * AND of this predicate and the {@code other} predicate
+	     * @throws NullPointerException if other is null
+	     */
+	    default BiPredicate<A, B> and(BiPredicate<? super A, ? super B> other)
+	    {
+	        Objects.requireNonNull(other);
+	        return (a, b) -> test(a, b) && other.test(a, b);
+	    }
+
+	    /**
+	     * Returns a predicate that represents the logical negation of this
+	     * predicate.
+	     *
+	     * @return a predicate that represents the logical negation of this
+	     * predicate
+	     */
+	    default BiPredicate<A, B> negate()
+	    {
+	        return (a, b) -> !test(a, b);
+	    }
+	    
+	    /**
+	     * Returns a predicate that is the negation of the supplied predicate.
+	     * This is accomplished by returning result of the calling
+	     * {@code target.negate()}.
+	     *
+	     * @param <A>     the type of arguments to the specified predicate
+	     * @param <B>     the type of arguments to the specified predicate
+	     * @param target  predicate to negate
+	     *
+	     * @return a predicate that negates the results of the supplied
+	     *         predicate
+	     *
+	     * @throws NullPointerException if target is null
+	     */
+	    @SuppressWarnings("unchecked")
+	    static <A, B> BiPredicate<A, B> not(BiPredicate<? super A, ? super B> target)
+	    {
+	        Objects.requireNonNull(target);
+	        return (BiPredicate<A, B>)target.negate();
+	    }
 	}
 	
 	/**
@@ -172,6 +328,84 @@ public class Functions
 		 * @throws Exception if an error happens
 		 */
 		public boolean test(A a, B b, C c) throws Exception;
+		
+		/**
+	     * Returns a composed predicate that represents a short-circuiting logical
+	     * OR of this predicate and another.  When evaluating the composed
+	     * predicate, if this predicate is {@code true}, then the {@code other}
+	     * predicate is not evaluated.
+	     *
+	     * <p>Any exceptions thrown during evaluation of either predicate are relayed
+	     * to the caller; if evaluation of this predicate throws an exception, the
+	     * {@code other} predicate will not be evaluated.
+	     *
+	     * @param other a predicate that will be logically-ORed with this
+	     *              predicate
+	     * @return a composed predicate that represents the short-circuiting logical
+	     * OR of this predicate and the {@code other} predicate
+	     * @throws NullPointerException if other is null
+	     */
+		default TriPredicate<A, B, C> or(TriPredicate<? super A, ? super B, ? super C> other)
+		{
+			Objects.requireNonNull(other);
+	        return (a, b, c) -> test(a, b, c) || other.test(a, b, c);
+		}
+		
+		/**
+	     * Returns a composed predicate that represents a short-circuiting logical
+	     * AND of this predicate and another.  When evaluating the composed
+	     * predicate, if this predicate is {@code false}, then the {@code other}
+	     * predicate is not evaluated.
+	     *
+	     * <p>Any exceptions thrown during evaluation of either predicate are relayed
+	     * to the caller; if evaluation of this predicate throws an exception, the
+	     * {@code other} predicate will not be evaluated.
+	     *
+	     * @param other a predicate that will be logically-ANDed with this
+	     *              predicate
+	     * @return a composed predicate that represents the short-circuiting logical
+	     * AND of this predicate and the {@code other} predicate
+	     * @throws NullPointerException if other is null
+	     */
+	    default TriPredicate<A, B, C> and(TriPredicate<? super A, ? super B, ? super C> other)
+	    {
+	        Objects.requireNonNull(other);
+	        return (a, b, c) -> test(a, b, c) && other.test(a, b, c);
+	    }
+
+	    /**
+	     * Returns a predicate that represents the logical negation of this
+	     * predicate.
+	     *
+	     * @return a predicate that represents the logical negation of this
+	     * predicate
+	     */
+	    default TriPredicate<A, B, C> negate()
+	    {
+	        return (a, b, c) -> !test(a, b, c);
+	    }
+	    
+	    /**
+	     * Returns a predicate that is the negation of the supplied predicate.
+	     * This is accomplished by returning result of the calling
+	     * {@code target.negate()}.
+	     *
+	     * @param <A>     the type of arguments to the specified predicate
+	     * @param <B>     the type of arguments to the specified predicate
+	     * @param <C>     the type of arguments to the specified predicate
+	     * @param target  predicate to negate
+	     *
+	     * @return a predicate that negates the results of the supplied
+	     *         predicate
+	     *
+	     * @throws NullPointerException if target is null
+	     */
+	    @SuppressWarnings("unchecked")
+	    static <A, B, C> TriPredicate<A, B, C> not(TriPredicate<? super A, ? super B, ? super C> target)
+	    {
+	        Objects.requireNonNull(target);
+	        return (TriPredicate<A, B, C>)target.negate();
+	    }
 	}
 	
 	/**

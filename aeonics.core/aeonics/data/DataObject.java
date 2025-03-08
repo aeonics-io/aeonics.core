@@ -39,7 +39,7 @@ public class DataObject implements Data
 	public boolean containsKey(String key) { return false; }
 	
 	public void clear() { this.source = null; }
-	public int size() { return 1; }
+	public int size() { return isString() ? ((String)source).length() : 1; }
 	public Data remove(String key) { throw new RuntimeException("This element is not a container"); }
 	public Data remove(int index) { throw new RuntimeException("This element is not a container"); }
 	public Data remove(Data item) { throw new RuntimeException("This element is not a container"); }

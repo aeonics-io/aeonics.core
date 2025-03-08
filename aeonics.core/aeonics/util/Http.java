@@ -22,6 +22,12 @@ import aeonics.manager.Network;
  */
 public class Http
 {
+	/**
+	 * The maximum number of milliseconds to wait before the connection is established.
+	 * This does not affect the response time once the connection is established.
+	 */
+	public static int CONNECT_TIMEOUT = 1500;
+	
 	private Http() { /* no instances */ }
 	
 	/**
@@ -80,7 +86,7 @@ public class Http
 	public static Data post(String url, Data body, Data headers) { return post(url, body, headers, "POST"); }
 	
 	/**
-	 * Fetches the specified resource using the provided method
+	 * Fetches the specified resource using the provided method and include the parameters in the body of the request
 	 * @param url the url
 	 * @param body the content to send in key/value pairs
 	 * @param headers the http request headers
@@ -88,7 +94,19 @@ public class Http
 	 * @return the response
 	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
 	 */
-	public static Data post(String url, Data body, Data headers, String method)
+	public static Data post(String url, Data body, Data headers, String method) { return post(url, body, headers, method, 0); }
+	
+	/**
+	 * Fetches the specified resource using the provided method and include the parameters in the body of the request
+	 * @param url the url
+	 * @param body the content to send in key/value pairs
+	 * @param headers the http request headers
+	 * @param method the http method
+	 * @param timeout the request timeout in milliseconds. 0 means infinite.
+	 * @return the response
+	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
+	 */
+	public static Data post(String url, Data body, Data headers, String method, int timeout)
 	{
 		HttpURLConnection connection = null;
 		
@@ -106,6 +124,8 @@ public class Http
 			connection = (HttpURLConnection)u.openConnection();
 			connection.setRequestMethod(method);
 			connection.setDoOutput(true);
+			connection.setConnectTimeout(CONNECT_TIMEOUT);
+			connection.setInstanceFollowRedirects(true);
 			
 			if( connection instanceof HttpsURLConnection )
 			{
@@ -143,11 +163,29 @@ public class Http
 					{
 						for( Map.Entry<String, Data> p : body.entrySet() )
 						{
-							content.write("--a-e-o-n-i-c-s\r\nContent-Disposition: form-data; name=\"".getBytes(StandardCharsets.ISO_8859_1));
-							content.write(p.getKey().replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
-							content.write("\"\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
-							content.write(p.getValue().asString().getBytes(StandardCharsets.ISO_8859_1)); 
-							content.write("\r\n".getBytes(StandardCharsets.ISO_8859_1));
+							Data value = p.getValue();
+							if( value.isMap() && value.containsKey("name") && value.containsKey("mime") && value.containsKey("content") )
+							{
+								// file upload
+								content.write("--a-e-o-n-i-c-s\r\nContent-Disposition: form-data; name=\"".getBytes(StandardCharsets.ISO_8859_1));
+								content.write(p.getKey().replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write("\"; filename=\"".getBytes(StandardCharsets.ISO_8859_1));
+								content.write(value.asString("name").replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write("\"\r\nContent-Type: ".getBytes(StandardCharsets.ISO_8859_1));
+								content.write(value.asString("mime").replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write("\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
+								content.write(value.asString("content").getBytes(StandardCharsets.ISO_8859_1)); 
+								content.write("\r\n".getBytes(StandardCharsets.ISO_8859_1));
+							}
+							else
+							{
+								// form data
+								content.write("--a-e-o-n-i-c-s\r\nContent-Disposition: form-data; name=\"".getBytes(StandardCharsets.ISO_8859_1));
+								content.write(p.getKey().replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write("\"\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
+								content.write(value.asString().getBytes(StandardCharsets.ISO_8859_1)); 
+								content.write("\r\n".getBytes(StandardCharsets.ISO_8859_1));
+							}
 						}
 						content.write("--a-e-o-n-i-c-s--\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
 					}
@@ -224,7 +262,7 @@ public class Http
 	public static Data get(String url, Data queryString, Data headers) { return get(url, queryString, headers, "GET"); }
 	
 	/**
-	 * Fetches the specified resource using the provided method
+	 * Fetches the specified resource using the provided method and include the parameters in the query string of the request
 	 * @param url the url
 	 * @param queryString the content to append to the url in key/value pairs
 	 * @param headers the http request headers
@@ -232,7 +270,19 @@ public class Http
 	 * @return the response
 	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
 	 */
-	public static Data get(String url, Data queryString, Data headers, String method)
+	public static Data get(String url, Data queryString, Data headers, String method) { return get(url, queryString, headers, method, 0); }
+	
+	/**
+	 * Fetches the specified resource using the provided method and include the parameters in the query string of the request
+	 * @param url the url
+	 * @param queryString the content to append to the url in key/value pairs
+	 * @param headers the http request headers
+	 * @param method the http method
+	 * @param timeout the request timeout in milliseconds. 0 means infinite.
+	 * @return the response
+	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
+	 */
+	public static Data get(String url, Data queryString, Data headers, String method, int timeout)
 	{
 		HttpURLConnection connection = null;
 		
@@ -266,6 +316,9 @@ public class Http
 
 			connection = (HttpURLConnection)u.openConnection();
 			connection.setRequestMethod(method);
+			connection.setConnectTimeout(Math.max(timeout, CONNECT_TIMEOUT));
+			if( timeout > 0 ) connection.setReadTimeout(timeout);
+			connection.setInstanceFollowRedirects(true);
 			
 			if( connection instanceof HttpsURLConnection )
 			{

@@ -4,18 +4,19 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import aeonics.data.Data;
 import aeonics.entity.Entity;
 import aeonics.manager.Config;
+import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.manager.Translator;
 import aeonics.manager.Vault;
 import aeonics.util.Documented;
 import aeonics.util.Exportable;
+import aeonics.util.Functions.Predicate;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
 
@@ -133,7 +134,15 @@ public class Parameter implements Documented
 		if( value == null ) value = Data.empty();
 		
 		Predicate<Data> v = validator();
-		if( v != null ) return v.test(value);
+		if( v != null )
+		{
+			try { return v.test(value); }
+			catch(Exception e)
+			{
+				Manager.of(Logger.class).fine(Parameter.class, e);
+				return false;
+			}
+		}
 		else return true;
 	}
 	

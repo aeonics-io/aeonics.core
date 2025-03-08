@@ -72,7 +72,7 @@ public abstract class Config extends Manager.Type
 	public static Tuple<String, String> explodeName(String name)
 	{
 		name = StringUtils.trim(name.toLowerCase(Locale.ROOT).replace('_', '.'), '.', ' ');
-		int delimiter = name.lastIndexOf(':');
+		int delimiter = name.indexOf(':');
 		
 		// there was no ':' so split based on the last '.' instead
 		if( delimiter < 0 ) delimiter = name.lastIndexOf('.');

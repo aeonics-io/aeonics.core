@@ -541,6 +541,18 @@ public interface Data extends Iterable<Data>
 	public int size();
 	
 	/**
+	 * Returns the number of element in case of map or list, or 1 for an object
+	 * @return the number of element in case of map or list, or 1 for an object
+	 */
+	public default int size(String key) { Data a = get(key); if( a == null ) return 0; else return a.size(); }
+	
+	/**
+	 * Returns the number of element in case of map or list, or 1 for an object
+	 * @return the number of element in case of map or list, or 1 for an object
+	 */
+	public default int size(int index) { Data a = get(index); if( a == null ) return 0; else return a.size(); }
+	
+	/**
 	 * Removes the mapped element and returns it
 	 * @param key the element key
 	 * @return the previously mapped element, or null if there was no mapping for the key

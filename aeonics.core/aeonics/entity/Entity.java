@@ -453,7 +453,7 @@ public class Entity implements Exportable, Snapshotable
 	 * Adds a relation to the provided entity
 	 * @param relationship the relationship name
 	 * @param entity the related entity
-	 * @param parameters the relationship parameters as a data object
+	 * @param parameters the relationship parameters as a data object. Only matching properties are preserved.
 	 * @return this for chaining
 	 * @throws IllegalArgumentException if the relationship does not exist, or the provided entity does not match the relation type, or the parameters do not pass validation
 	 * @throws RuntimeException if the maximum number of relations is reached
@@ -466,17 +466,22 @@ public class Entity implements Exportable, Snapshotable
 		if( !r.b.category().equals(entity.category()) ) throw new IllegalArgumentException("Entity category mismatch");
 		if( r.b.max() > 0 && r.b.max() <= r.a.size() ) throw new RuntimeException("Maximum number of relations reached");
 		
-		if( parameters == null || parameters.isNull() ) parameters = Data.map();
-		parameters.put("id", entity.id());
+		Data sanitized = Data.map();
+		r.b.parameters().keySet().forEach(name -> 
+		{
+			if( parameters != null && parameters.containsKey(name) )
+				sanitized.put(name, parameters.get(name));
+		});
+		sanitized.put("id", entity.id());
 		
 		for( Parameter p : r.b.parameters().values() )
 		{
-			Data value = parameters.get(p.name());
+			Data value = sanitized.get(p.name());
 			if( !p.validate(value) )
 				throw new IllegalArgumentException("Invalid value for parameter " + p.name());
 		}
 		
-		r.a.add(parameters);
+		r.a.add(sanitized);
 		return this;
 	}
 	
@@ -525,7 +530,6 @@ public class Entity implements Exportable, Snapshotable
 			if( r.a.get(i).asString("id").equals(entity.id()) )
 			{
 				r.a.remove(i);
-				return;
 			}
 		}
 	}
@@ -604,7 +608,8 @@ public class Entity implements Exportable, Snapshotable
 		Data d = Data.map()
 			.put("id", id())
 			.put("name", name())
-			//.put("internal", internal())
+			.put("internal", internal())
+			.put("readonly", snapshotMode() == SnapshotMode.NONE)
 			.put("category", category())
 			.put("type", type())
 			.put("class", getClass().getName())

@@ -1,5 +1,8 @@
 package aeonics.entity;
 
+import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
@@ -22,7 +25,7 @@ public class Flow extends Item<Flow.Type>
 	/**
 	 * Superclass template for flows
 	 */
-	public static class Type extends Entity
+	public static class Type extends Entity implements Closeable
 	{
 		/**
 		 * Hardcoded category to the {@link Flow} class
@@ -53,6 +56,22 @@ public class Flow extends Item<Flow.Type>
 			
 			addRelation("steps", step, Data.map().put("x", x).put("y", y));
 			return (T) this;
+		}
+		
+		/**
+		 * Cascade remove all steps in the flow
+		 */
+		public void close()
+		{
+			// clear the relations first to avoid loops
+			List<Step.Type> copy = new ArrayList<>();
+			for( Tuple<Entity, Data> step : relations("steps") )
+				if( step.a != null && !step.a.internal() )
+					copy.add(step.a.cast());
+			clearRelation("steps");
+			
+			// now remove them from the registry
+			copy.forEach(step -> Registry.of(Step.class).remove(step));
 		}
 	}
 

@@ -138,9 +138,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 		if( id == null || id.isBlank() ) return false;
 		if( entities.containsKey(id) ) return true;
 		
-		// search by name : much slower
+		// search by name and id with case insensitive : much slower
 		for( T e : entities.values() )
-			if( e != null && id.equals(e.name()) )
+			if( e != null && (id.equalsIgnoreCase(e.name()) || id.equalsIgnoreCase(e.id())) )
 				return true;
 		return false;
 	}
@@ -158,9 +158,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 		T entity = entities.get(id);
 		if( entity != null ) return (U) entity;
 		
-		// search by name : much slower
+		// search by name and id with case insensitive : much slower
 		for( T e : entities.values() )
-			if( e != null && id.equals(e.name()) )
+			if( e != null && (id.equalsIgnoreCase(e.name()) || id.equalsIgnoreCase(e.id())) )
 				return (U) e;
 		return null;
 	}
@@ -206,6 +206,23 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	
 	/**
 	 * Removes the specified entity.
+	 * If the entity is {@link Closeable}, it is closed.
+	 * 
+	 * <p>Note that internal entities cannot be removed. If you need to remove an internal entity, remove its internal flag first.</p>
+	 * @param <U> the entity type
+	 * @param entity the entity id
+	 * @return the removed entity or null if no entity was found
+	 */
+	public <U extends T> U remove(Entity entity)
+	{
+		if( entity != null )
+			return remove(entity.id());
+		else
+			return null;
+	}
+	
+	/**
+	 * Removes the specified entity.
 	 * The id is checked first and is a very cheap lookup. If nothing matches, all entities are checked to find the first `name` property that matches.
 	 * If the entity is {@link Closeable}, it is closed.
 	 * 
@@ -225,10 +242,10 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 			return closeIfCloseable((U) entity);
 		}
 		
-		// search by name : much slower
+		// search by name and id with case insensitive : much slower
 		for( T e : entities.values() )
 		{
-			if( e != null && !e.internal() && id.equals(e.name()) )
+			if( e != null && !e.internal() && (id.equalsIgnoreCase(e.name()) || id.equalsIgnoreCase(e.id())) )
 			{
 				entities.remove(e.id(), e);
 				onRemove().trigger(e);

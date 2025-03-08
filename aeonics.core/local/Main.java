@@ -18,7 +18,6 @@ import aeonics.entity.Probe;
 import aeonics.entity.Queue;
 import aeonics.entity.Registry;
 import aeonics.entity.Scheduled;
-import aeonics.entity.Step;
 import aeonics.entity.Storage;
 import aeonics.entity.Topic;
 import aeonics.entity.security.Group;
@@ -112,7 +111,6 @@ public class Main extends Plugin
 	{
 		// basic entities
 		Factory.add(new Database());
-		Factory.add(new Step.Origin());
 		Factory.add(new Scheduled());
 		Factory.add(new Probe());
 		Factory.add(new Queue());
@@ -157,6 +155,12 @@ public class Main extends Plugin
 			.format(Parameter.Format.TEXT)
 			.rule(Parameter.Rule.PATH)
 			.optional(false));
+		c.declare("aeonics.hardware.cpu", new Parameter("limit")
+			.summary("CPU Limit")
+			.description("This parameter defines the number of system worker threads to potentially limit the number of usable cores. It can be set to a higher value than real CPU cores.")
+			.format(Parameter.Format.NUMBER)
+			.rule(Parameter.Rule.DIGIT)
+			);
 		c.declare(Network.class, new Parameter("tls.default.ciphers")
 			.summary("Default TLS Ciphers")
 			.description("This parameter is a JSON list of default TLS ciphers that should be used to secure network communications. Refer to standard JSSE Cipher Suite Names.")

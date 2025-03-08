@@ -11,6 +11,7 @@ import aeonics.manager.Executor.Task;
 import aeonics.manager.Manager;
 import aeonics.template.Channel;
 import aeonics.template.Parameter;
+import aeonics.util.Hardware;
 import aeonics.util.Tuples.Tuple;
 
 /**
@@ -111,6 +112,7 @@ public class Queue extends Action
 	{
 		return super.template()
 			.icon("stacks")
+			.role(ROLE.QUEUE)
 			.input(new Channel("data")
 				.summary("Data")
 				.description("Enqueue a message."))
@@ -135,7 +137,7 @@ public class Queue extends Action
 					+ "all messages are sent for processing immediately. The default value is the number of processors on the machine.")
 				.rule(Parameter.Rule.DIGIT)
 				.format(Parameter.Format.NUMBER)
-				.defaultValue(Runtime.getRuntime().availableProcessors()))
+				.defaultValue(Hardware.CPU.limit()))
 			.add(new Parameter("priority")
 				.summary("High priority")
 				.description("Whether or not this queue should execute in high priority mode.")

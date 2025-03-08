@@ -10,6 +10,7 @@ import com.sun.management.OperatingSystemMXBean;
 
 import aeonics.data.Data;
 import aeonics.manager.Manager;
+import aeonics.manager.Config;
 import aeonics.manager.Logger;
 
 /**
@@ -75,6 +76,48 @@ public class Hardware
 		}
 		
 		/**
+		 * the target limit of usable cores
+		 */
+		private static int limit = -1;
+		
+		/**
+		 * Returns the desired soft limit on the number of usable cores.
+		 * This value cannot be changed after it has been accessed for the first time.
+		 * 
+		 * <p>The core limit is defined to refrain the system from using all available cores using the
+		 * <code>AEONICS_HARDWARE_CPU_LIMIT</code> startup parameter, environment variable or {@link Config} property depending on which is set.
+		 * If the value is not set, the {@link Runtime#availableProcessors()} value is used.
+		 * </p>
+		 * <p>This limit is provided as a user-defined hint on the desired cpu limit which is usually proportional to the number of worker threads in the system. 
+		 * There is no guarantees that this value is honored -strictly or not- by the system.
+		 * </p>
+		 * <p>The limit may be set to a higher value than that of the available {@link #cores()}, allowing for overprovisioning of resources in 
+		 * case the processing intensity per thread is low (probably due to i/o).
+		 * </p>
+		 * @return the target limit of usable cores
+		 */
+		public static int limit()
+		{
+			if( limit > 0 ) return limit;
+			
+			synchronized(Hardware.CPU.class)
+			{
+				if( limit > 0 ) return limit;
+				
+				String value = null;
+				if( Manager.of(Config.class) != null ) value = Manager.of(Config.class).get("AEONICS_HARDWARE_CPU_LIMIT").asString();
+				if( value == null || value.isBlank() ) value = System.getProperty("AEONICS_HARDWARE_CPU_LIMIT");
+				if( value == null || value.isBlank() ) value = System.getenv("AEONICS_HARDWARE_CPU_LIMIT");
+				if( value == null || value.isBlank() ) value = "" + Runtime.getRuntime().availableProcessors();
+				try { Integer.parseInt(value); } catch(Exception e) { value = "" + Runtime.getRuntime().availableProcessors(); }
+				limit = Integer.parseInt(value);
+				System.setProperty("AEONICS_HARDWARE_CPU_LIMIT", ""+limit);
+				
+				return limit;
+			}
+		}
+		
+		/**
 		 * Process PID
 		 */
 		static final long PID = ProcessHandle.current().pid();
@@ -93,7 +136,7 @@ public class Hardware
 		 */
 		public static Data export()
 		{
-			return Data.map().put("process", load()).put("system", system()).put("cores", cores()).put("pid", pid());
+			return Data.map().put("process", load()).put("system", system()).put("cores", cores()).put("limit", limit()).put("pid", pid());
 		}
 	}
 	

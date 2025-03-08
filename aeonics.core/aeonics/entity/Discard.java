@@ -61,8 +61,10 @@ public class Discard
 			if( !started() ) start();
 			
 			// if the message was already discarded or is debug, ignore
-			if( message.metadata().asBool("discarded") || message.metadata().asBool("debug") ) return;
-			message.metadata().put("discarded", true);
+			if( message.metadata().asBool("discarded") || message.metadata().asBool("debug") )
+				return;
+			else
+				message.metadata().put("discarded", true);
 			
 			super.produce(message, channel);
 		}
@@ -75,7 +77,7 @@ public class Discard
 		.<Step.Template>cast().icon("delete")
 		.output(new Channel("data").summary("Data").description("Discarded data that has been ignored by other entities"))
 		.summary("Discard")
-		.description("This data origin is used as a last resort for all discarded messages. It publishes in the internal 'discard' topic.")
+		.description("This data origin is used as a last resort for all discarded messages. An already discarded message is ignored silently.")
 		.create(Data.map().put("id", "10000000-1600000000000000"))
 		.name("Discard")
 		.internal(true)

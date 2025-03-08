@@ -44,6 +44,15 @@ public abstract class Step extends Item<Step.Type>
 	//
 	// ================================
 	
+	public enum ROLE
+	{
+		ORIGIN,
+		ACTION,
+		DESTINATION,
+		TOPIC,
+		QUEUE
+	}
+	
 	/**
 	 * Template for all step entities
 	 */
@@ -178,6 +187,24 @@ public abstract class Step extends Item<Step.Type>
 		 */
 		public <T extends Step.Template> T icon(String value) { icon = value; return (T) this; }
 		
+		/** 
+		 * The step role in the flow 
+		 */
+		private ROLE role = null;
+		
+		/**
+		 * Returns the role of this step in the flow.
+		 * @return the role of this step in the flow
+		 */
+		public ROLE role() { return role; }
+		
+		/**
+		 * Sets the role of this step in the flow.
+		 * @param <T> the template type
+		 * @param value the role
+		 * @return this
+		 */
+		<T extends Step.Template> T role(ROLE value) { role = value; return (T) this; }
 		
 		@Override
 		public Data export()
@@ -190,6 +217,7 @@ public abstract class Step extends Item<Step.Type>
 			
 			return super.export()
 				.put("icon", icon())
+				.put("role", role())
 				.put("inputs", i)
 				.put("outputs", o);
 		}
@@ -199,8 +227,19 @@ public abstract class Step extends Item<Step.Type>
      * Represents the core processing logic for a step in the workflow.
      * Subclasses should define the specific behavior for message handling and security checks.
      */
-	public static abstract class Type extends Entity
+	public static abstract class Type extends Entity implements Closeable
 	{
+		/**
+		 * Cleanup relationships when this step is removed from the Registry
+		 */
+		public void close()
+		{
+			for( Flow.Type flow : Registry.of(Flow.class) )
+				flow.removeRelation("steps", this);
+			for( Step.Type step : Registry.of(Step.class) )
+				step.removeRelation("links", this);
+		}
+		
 		/** 
          * A security check that will be invoked before processing a message.
          * This is a user-defined logic provided as a {@link TriConsumer}, which
@@ -302,9 +341,9 @@ public abstract class Step extends Item<Step.Type>
 					return (T) this;
 			}
 			
-			if( parameters == null ) parameters = Data.map();
+			if( parameters == null || parameters.isNull() ) parameters = Data.map();
 			if( !parameters.isMap() ) throw new IllegalArgumentException("Invalid relation parameters: " + parameters);
-				
+			
 			addRelation("links", next, parameters.put("output", output).put("input", input));
 			return (T) this;
 		}
@@ -330,22 +369,6 @@ public abstract class Step extends Item<Step.Type>
 		}
 		
 		/**
-		 * Drops a message and interrupt all processing flow.
-		 * This includes <ul>
-		 * <li>error in processing an error message,</li> 
-		 * <li>ignoring an ignored message,</li>
-		 * <li>message ttl reached,</li>
-		 * <li>any other specific conditions.</li>
-		 * </ul>
-		 * <p>The default behavior is to ignore the message and generate a log entry.</p>
-		 * @param message the message to drop
-		 */
-		void drop(Message message)
-		{
-			Manager.of(Logger.class).log(Logger.FINEST, this.getClass(), "Dropped message: {}", message);
-		}
-		
-		/**
 		 * Performs the actual emit action with drop conditions check first.
 		 * @param message the message
 		 * @param output the output channel name
@@ -360,10 +383,15 @@ public abstract class Step extends Item<Step.Type>
 			
 			if( (output.equals("error") && message.metadata().asBool("ignored"))
 				|| (output.equals("ignore") && message.metadata().asBool("ignored"))
-				|| (message.metadata().asInt("ttl") <= 0)
 				)
 			{
-				drop(message); // do not process message
+				Discard.error(message, new Exception("Infinite message routing loop"));
+				return Manager.of(Executor.class).normalResolved(Manager.of(Executor.class).normalResolved(null));
+			}
+			
+			if( message.metadata().asInt("ttl") <= 0 )
+			{
+				Discard.expired(message);
 				return Manager.of(Executor.class).normalResolved(Manager.of(Executor.class).normalResolved(null));
 			}
 			
@@ -406,7 +434,15 @@ public abstract class Step extends Item<Step.Type>
 			
 			// no match -> ignore
 			if( links.size() == 0 )
-				return emit(message, "ignore");
+			{
+				if( output.equals("ignore") )
+				{
+					Discard.error(message, new Exception("Infinite message routing loop"));
+					return Manager.of(Executor.class).normalResolved(null);
+				}
+				else
+					return emit(message, "ignore");
+			}
 			
 			// track the status of each
 			List<Task<?>> status = new ArrayList<>(links.size());
@@ -682,7 +718,7 @@ public abstract class Step extends Item<Step.Type>
 	         * @param message The {@link Message} to be emitted to the specified output channel.
 	         * @param output  The name of the output channel where the message should be routed.
 	         */
-			protected void produce(Message message, String output)
+			public void produce(Message message, String output)
 			{
 				this.emit(message, output);
 			}
@@ -1094,6 +1130,7 @@ public abstract class Step extends Item<Step.Type>
 			return super.template()
 				.inputEnabled(false)
 				.outputEnabled(true)
+				.role(ROLE.ORIGIN)
 				.icon("cloud_upload")
 				;
 		}
@@ -1219,6 +1256,7 @@ public abstract class Step extends Item<Step.Type>
 			return super.template()
 				.inputEnabled(true)
 				.outputEnabled(true)
+				.role(ROLE.ACTION)
 				.icon("crop_rotate")
 				;
 		}
@@ -1328,6 +1366,7 @@ public abstract class Step extends Item<Step.Type>
 			return super.template()
 				.inputEnabled(true)
 				.outputEnabled(false)
+				.role(ROLE.DESTINATION)
 				.icon("where_to_vote")
 				;
 		}
