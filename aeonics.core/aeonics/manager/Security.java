@@ -2,6 +2,7 @@ package aeonics.manager;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 
 import aeonics.data.Data;
@@ -290,4 +291,11 @@ public abstract class Security extends Manager.Type
 	 * @param user the target user, must not be null and must not be {@link User#SYSTEM} or {@link User#ANONYMOUS}
 	 */
 	public abstract void clearTokens(User.Type user);
+	
+	/**
+	 * Returns a shadow copy of all tokens for the provided user.
+	 * If a token needs to be revoked, use {@link #revokeToken(Token)}.
+	 * @param user the target user, must not be null and must not be {@link User#SYSTEM} or {@link User#ANONYMOUS}
+	 */
+	public abstract Collection<Token> listTokens(User.Type user);
 }

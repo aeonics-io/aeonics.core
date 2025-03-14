@@ -21,6 +21,7 @@ import aeonics.entity.Scheduled;
 import aeonics.entity.Storage;
 import aeonics.entity.Topic;
 import aeonics.entity.security.Group;
+import aeonics.entity.security.Multifactor;
 import aeonics.entity.security.Policy;
 import aeonics.entity.security.Provider;
 import aeonics.entity.security.Role;
@@ -122,6 +123,7 @@ public class Main extends Plugin
 		
 		// security entities
 		Factory.add(new Group());
+		Factory.add(new Multifactor.TOTP());
 		Factory.add(new Policy.Allow());
 		Factory.add(new Policy.Deny());
 		Factory.add(new Policy.TargetedAllow());

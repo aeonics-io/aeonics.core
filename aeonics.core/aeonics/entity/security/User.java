@@ -141,6 +141,15 @@ public class User extends Item<User.Type>
 			
 			return false;
 		}
+		
+		/**
+		 * Returns the user attributes
+		 * @return the user attributes
+		 */
+		public Data attributes()
+		{
+			return valueOf("attributes");
+		}
 	}
 	
 	protected Class<? extends User.Type> defaultTarget() { return User.Type.class; }

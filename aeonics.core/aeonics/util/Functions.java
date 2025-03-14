@@ -1,7 +1,6 @@
 package aeonics.util;
 
 import java.util.Objects;
-import java.util.function.Predicate;
 
 /**
  * This collection of classes are extensions to the default <code>java.util.function</code> package.

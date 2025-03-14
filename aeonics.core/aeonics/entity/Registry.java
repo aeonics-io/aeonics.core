@@ -1,11 +1,13 @@
 package aeonics.entity;
 
 import java.io.Closeable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import aeonics.data.Data;
 import aeonics.template.Item;
@@ -338,6 +340,18 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	public Iterator<T> iterator()
 	{
 		return entities.values().iterator();
+	}
+	
+	/**
+	 * Returns a subset of the entities present in this registry based on the specified filter function
+	 * @param filter the filter function
+	 * @return all entities that match the given filter
+	 */
+	public Collection<T> filter(Predicate<T> filter)
+	{
+		return entities.values().stream()
+            .filter(filter)
+            .collect(Collectors.toList());
 	}
 	
 	public Data export()

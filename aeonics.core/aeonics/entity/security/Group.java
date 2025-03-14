@@ -34,6 +34,15 @@ public class Group extends Item<Group.Type>
 		 */
 		@Override
 		public final String category() { return StringUtils.toLowerCase(Group.class); }
+		
+		/**
+		 * Returns the group attributes
+		 * @return the group attributes
+		 */
+		public Data attributes()
+		{
+			return valueOf("attributes");
+		}
 	}
 	
 	protected Class<? extends Group.Type> defaultTarget() { return Group.Type.class; }

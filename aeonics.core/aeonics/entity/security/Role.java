@@ -33,6 +33,15 @@ public class Role extends Item<Role.Type>
 		 */
 		@Override
 		public final String category() { return StringUtils.toLowerCase(Role.class); }
+		
+		/**
+		 * Returns the role attributes
+		 * @return the role attributes
+		 */
+		public Data attributes()
+		{
+			return valueOf("attributes");
+		}
 	}
 	
 	protected Class<? extends Role.Type> defaultTarget() { return Role.Type.class; }

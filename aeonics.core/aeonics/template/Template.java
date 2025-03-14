@@ -1,6 +1,8 @@
 package aeonics.template;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +74,12 @@ public class Template<T extends Entity> implements Documented
 	 * The list of parameters
 	 */
 	private Map<String, Parameter> parameters = new HashMap<>();
+	
+	/**
+	 * Returns a read-only collection of parameters of this template
+	 * @return
+	 */
+	public Collection<Parameter> parameters() { return Collections.unmodifiableCollection(parameters.values()); }
 	
 	/**
 	 * Adds a parameter that the target entity expects.

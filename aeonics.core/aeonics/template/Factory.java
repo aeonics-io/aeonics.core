@@ -1,8 +1,11 @@
 package aeonics.template;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import aeonics.data.Data;
 import aeonics.entity.Entity;
@@ -268,6 +271,18 @@ public class Factory<T extends Entity> implements Iterable<Template<T>>
 	 * @return the number of templates in this factory
 	 */
 	public int size() { return templates.size(); }
+	
+	/**
+	 * Returns a subset of the templates present in this factory based on the specified filter function
+	 * @param filter the filter function
+	 * @return all entities that match the given filter
+	 */
+	public Collection<Template<T>> filter(Predicate<Template<T>> filter)
+	{
+		return templates.values().stream()
+            .filter(filter)
+            .collect(Collectors.toList());
+	}
 	
 	/**
 	 * Returns an iterator over all templates registered in this factory

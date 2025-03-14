@@ -222,7 +222,7 @@ public abstract class Provider extends Item<Provider.Type>
 			{
 				if( context == null || !context.isMap() || !context.containsKey("username") ) return null;
 				
-				Data priv = Data.map().put("hash", null).put("salt", null);
+				Data priv = Data.map().put("password", null).put("salt", null);
 				
 				if( context.containsKey("password") )
 				{
