@@ -244,7 +244,8 @@ public class Entity implements Exportable, Snapshotable
 	 * Returns the current context
 	 * @return the current context
 	 */
-	protected Data context() { return context == null ? null : context.get(); }
+	@Internal
+	public Data context() { return context == null ? null : context.get(); }
 	
 	/**
 	 * Returns the value of the specified parameter using the current {@link #context()} information.
@@ -513,6 +514,28 @@ public class Entity implements Exportable, Snapshotable
 	/**
 	 * Removes a relation with the specified entity
 	 * @param relationship the relationship name
+	 * @param entity the related entity id
+	 * @throws IllegalArgumentException if the relationship does not exist
+	 * @throws RuntimeException if the minimum number of relations is reached
+	 */
+	public void removeRelation(String relationship, String entity)
+	{
+		Tuple<List<Data>, Relationship> r = relationships.get(relationship);
+		if( r == null ) throw new IllegalArgumentException("Invalid relationship name");
+		if( r.b.min() > 0 &&  r.b.min() >= r.a.size() ) throw new RuntimeException("Minimum number of relations reached");
+		
+		for( int i = 0; i < r.a.size(); i++ )
+		{
+			if( r.a.get(i).asString("id").equals(entity) )
+			{
+				r.a.remove(i);
+			}
+		}
+	}
+	
+	/**
+	 * Removes a relation with the specified entity
+	 * @param relationship the relationship name
 	 * @param entity the related entity
 	 * @throws IllegalArgumentException if the relationship does not exist
 	 * @throws RuntimeException if the minimum number of relations is reached
@@ -638,15 +661,15 @@ public class Entity implements Exportable, Snapshotable
 	private Snapshotable.SnapshotMode snapshotMode = Snapshotable.SnapshotMode.FULL;
 	
 	/**
-	 * Returns whether or not this entity should be included in snapshots.
-	 * This is different from {@link #internal()} in that this entity will be totally omitted if false.
-	 * <p>This method returns true by default.</p>
-	 * @return true if this entity should be included in snapshots.
+	 * Returns how this entity should be included in snapshots.
+	 * @return the snapshot mode
+	 * @see SnapshotMode
 	 */
 	public Snapshotable.SnapshotMode snapshotMode() { return snapshotMode; }
 	
 	/**
 	 * Sets the snapshot mode for this entity.
+	 * <p><b>{@link #internal()} entities should not have a {@link SnapshotMode#FULL}</b></p>
 	 * @param <T> this entity type
 	 * @param value the snapshot mode
 	 * @return this
@@ -682,19 +705,20 @@ public class Entity implements Exportable, Snapshotable
 	 * 
 	 * <p>In order to safeguard the potentially private or confidential data returned by this method out of necessity,
 	 * a check on the caller is performed to allow only the current {@link Snapshot} implementation to call this method.</p>
+	 * 
+	 * <p><b>{@link #internal()} entities should not have a {@link SnapshotMode#FULL}</b></p>
 	 */
 	public Data snapshot()
 	{
 		CheckCaller.require(Manager.of(Snapshot.class).getClass(), null);
 		
-		Data d = Data.map().put("id", id()).put("category", category()).put("type", type()).put("mode", snapshotMode());
+		Data d = Data.map().put("id", id()).put("internal",  internal()).put("category", category()).put("type", type()).put("mode", snapshotMode());
 		
 		switch(snapshotMode())
 		{
 			case FULL:
 			{
 				d.put("name", name())
-				//.put("internal", internal())
 				.put("class", getClass().getName())
 				.put("plugin", getClass().getModule().getName());
 			}

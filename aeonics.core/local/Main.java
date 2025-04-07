@@ -87,7 +87,7 @@ public class Main extends Plugin
 			}
 		});
 		
-		Lifecycle.before(Phase.LOAD, this::onBeforeLoad);
+		//Lifecycle.before(Phase.LOAD, this::onBeforeLoad);
 		Lifecycle.on(Phase.LOAD, this::onLoad);
 		
 		Boot.spark(() ->
@@ -149,6 +149,8 @@ public class Main extends Plugin
 	
 	public void onLoad()
 	{
+		onBeforeLoad();
+		
 		Config c = Manager.of(Config.class);
 		
 		c.declare(Plugin.class, new Parameter("path")

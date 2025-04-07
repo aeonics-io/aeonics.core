@@ -276,7 +276,8 @@ public abstract class Storage extends Item<Storage.Type>
 				Path p = path(path);
 				try
 				{
-					Files.createDirectories(p.getParent());
+					if( p.getParent() != null )
+						Files.createDirectories(p.getParent());
 					Files.write(p, content);
 				}
 				catch(Exception e) { throw new RuntimeException(e); }

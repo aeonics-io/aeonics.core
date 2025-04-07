@@ -153,7 +153,6 @@ public class Parameter implements Documented
 	{
 		String s = value.asString();
 		if( s.length() == 0 && defaultValue() != null ) s = defaultValue().asString(); 
-		if( s.length() == 0 && !optional() ) return false;
 		if( s.length() == 0 && optional() ) return true;
 		if( s.length() < min() || s.length() > max() ) return false;
 		if( values().size() > 0 && !values().contains(s) ) return false;

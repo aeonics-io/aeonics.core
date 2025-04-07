@@ -98,6 +98,13 @@ public class Template<T extends Entity> implements Documented
 	public <U extends Template<T>> U removeParameter(String parameter) { parameters.remove(parameter); return (U) this; }
 	
 	/**
+	 * Removes all parameters that the target entity expects.
+	 * @param <U> the template type
+	 * @return this
+	 */
+	public <U extends Template<T>> U clearParameters() { parameters.clear(); return (U) this; }
+	
+	/**
 	 * The list of related configuration parameters that the target entity needs to watch 
 	 */
 	private List<String> configs = new ArrayList<>();

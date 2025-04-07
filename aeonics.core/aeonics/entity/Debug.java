@@ -102,12 +102,13 @@ public class Debug
 			{
 				if( e.getClassName().equals(Debug.class.getName()) ) return false;
 				
-				return (level <= Logger.ALL || ((e.getModuleName() == null || !e.getModuleName().startsWith("java.")) 
-					|| !e.getClassName().startsWith("java.") 
-					|| !e.getClassName().startsWith("javax.") 
-					|| !e.getClassName().startsWith("jdk.") 
-					|| !e.getClassName().startsWith("sun.") 
-					|| !e.getClassName().startsWith("aeonics.")) );
+				return (level <= Logger.ALL || !(
+					(e.getModuleName() != null && e.getModuleName().startsWith("java."))
+					|| e.getClassName().startsWith("java.")
+					|| e.getClassName().startsWith("javax.")
+					|| e.getClassName().startsWith("jdk.")
+					|| e.getClassName().startsWith("sun.")
+					|| e.getClassName().startsWith("aeonics.")) );
 			})
 			.collect(Collectors.toList()));
 	}
