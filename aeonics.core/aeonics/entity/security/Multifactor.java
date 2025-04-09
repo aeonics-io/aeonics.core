@@ -217,9 +217,9 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 				{
 					Data info = Data.map()
 						.put("secret", context.asString("secret"))
-						.put("period", Manager.of(Config.class).get(type(), "otp.period"))
-						.put("digits", Manager.of(Config.class).get(type(), "otp.digits"))
-						.put("algorithm", Manager.of(Config.class).get(type(), "otp.algorithm"));
+						.put("period", Manager.of(Config.class).get(type(), "otpperiod"))
+						.put("digits", Manager.of(Config.class).get(type(), "otpdigits"))
+						.put("algorithm", Manager.of(Config.class).get(type(), "otpalgorithm"));
 					
 					privateData(user, info);
 				}
@@ -240,16 +240,16 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 				
 				Data info = Data.map()
 					.put("secret", base32Encode(generateSecret()))
-					.put("period", Manager.of(Config.class).get(type(), "otp.period"))
-					.put("digits", Manager.of(Config.class).get(type(), "otp.digits"))
-					.put("algorithm", Manager.of(Config.class).get(type(), "otp.algorithm"));
+					.put("period", Manager.of(Config.class).get(type(), "otpperiod"))
+					.put("digits", Manager.of(Config.class).get(type(), "otpdigits"))
+					.put("algorithm", Manager.of(Config.class).get(type(), "otpalgorithm"));
 				
 				return info
 					.put("url", "otpauth://totp/" 
-						+ URLEncoder.encode(Manager.of(Config.class).get(type(), "otp.issuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") + ":" 
+						+ URLEncoder.encode(Manager.of(Config.class).get(type(), "otpissuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") + ":" 
 						+ URLEncoder.encode(user.name(), StandardCharsets.UTF_8).replace("+", "%20") + "?" +
 						"secret=" + info.get("secret") +
-						"&issuer=" + URLEncoder.encode(Manager.of(Config.class).get(type(), "otp.issuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") +
+						"&issuer=" + URLEncoder.encode(Manager.of(Config.class).get(type(), "otpissuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") +
 						"&algorithm=" + info.asString("algorithm") +
 						"&digits=" + info.asString("digits") +
 						"&period=" + info.asString("period"));
@@ -272,9 +272,9 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 				{
 					Data info = Data.map()
 						.put("secret", enroll.asString("secret"))
-						.put("period", Manager.of(Config.class).get(type(), "otp.period"))
-						.put("digits", Manager.of(Config.class).get(type(), "otp.digits"))
-						.put("algorithm", Manager.of(Config.class).get(type(), "otp.algorithm"));
+						.put("period", Manager.of(Config.class).get(type(), "otpperiod"))
+						.put("digits", Manager.of(Config.class).get(type(), "otpdigits"))
+						.put("algorithm", Manager.of(Config.class).get(type(), "otpalgorithm"));
 					
 					String otp = test.asString("otp");
 					long now = System.currentTimeMillis();
@@ -425,25 +425,25 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 			return super.template()
 				.summary("TOTP")
 				.description("Time-based One Time Password implementation.")
-				.config(new Parameter("otp.period")
+				.config(new Parameter("otpperiod")
 					.summary("OTP time window")
 					.description("The OTP time window in seconds.")
 					.rule(Parameter.Rule.DIGIT)
 					.format(Parameter.Format.NUMBER)
 					.defaultValue(30))
-				.config(new Parameter("otp.digits")
+				.config(new Parameter("otpdigits")
 					.summary("OTP number of digits")
 					.description("The number of OTP code digits.")
 					.rule(Parameter.Rule.DIGIT)
 					.format(Parameter.Format.NUMBER)
 					.defaultValue(6))
-				.config(new Parameter("otp.algorithm")
+				.config(new Parameter("otpalgorithm")
 					.summary("OTP algorithm")
 					.description("The name of the hash algorithm to use in OTP.")
 					.values("SHA1")
 					.format(Parameter.Format.SELECT)
 					.defaultValue("SHA1"))
-				.config(new Parameter("otp.issuer")
+				.config(new Parameter("otpissuer")
 					.summary("OTP issuer name")
 					.description("The name of the OTP issuer to be displayed by MFA apps.")
 					.format(Parameter.Format.TEXT)

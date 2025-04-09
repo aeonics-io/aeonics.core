@@ -100,13 +100,13 @@ public abstract class Storage extends Item<Storage.Type>
 	
 	/**
 	 * Resolves the provided path against a root path
-	 * @param root the root path to resolve against
-	 * @param path the requested path
-	 * @return the normalized resolved path
+	 * @param root the root path to resolve against (will not be normalized)
+	 * @param path the requested path (will be normalized)
+	 * @return the resolved path
 	 */
 	public static String resolve(String root, String path)
 	{
-		return normalize(normalize(root) + "/" + normalize(path));
+		return root + "/" + normalize(path);
 	}
 	
 	/**
