@@ -12,6 +12,7 @@ import java.security.KeyFactory;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -67,6 +68,76 @@ public abstract class Network extends Manager.Type
 	 */
 	public static class SecurityOptions
 	{
+		/**
+		 * Parses and returns a certificate from the given PEM-encoded certificate, or a valid 'storage://' URL
+		 * @param certificate the PEM-encoded certificate, or a valid 'storage://' URL
+		 * @return the actual certificate (not the chain)
+		 * @throws Exception if the provided certificate cannot be converted to valid X509Certificate
+		 */
+		public static X509Certificate certificate(String certificate) throws Exception
+		{
+			if( certificate == null || certificate.isBlank() ) throw new IllegalArgumentException("Empty certificate");
+			
+			InputStream certData = null;
+			if( certificate.startsWith("storage://") )
+				certData = URI.create(certificate).toURL().openConnection().getInputStream();
+			else
+				certData = new ByteArrayInputStream(certificate.getBytes(StandardCharsets.ISO_8859_1));
+			
+			CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			Object[] os = factory.generateCertificates(certData).toArray();
+			if( os.length == 0 ) throw new IllegalArgumentException("Invalid certificate");
+			X509Certificate[] certs = new X509Certificate[os.length];
+			for( int i = 0; i < os.length; i++ )
+				certs[i] = (X509Certificate) os[i];
+			X509Certificate cert = certs[0];
+			
+			return cert;
+		}
+		
+		/**
+		 * Parses and returns a private key from the given PEM-encoded key, or a valid 'storage://' URL.
+		 * <p><b>Caution, the key should be in PKCS#8 format.</b> If the key starts with <code>-----BEGIN PRIVATE KEY-----</code>
+		 * you are probably good. If it starts with <code>-----BEGIN RSA PRIVATE KEY-----</code> then it will most probably fail.</p>
+		 * @param cert the matching certificate (see {@link #certificate(String)})
+		 * @param key the PEM-encoded private key, or a valid 'storage://' URL
+		 * @return the private key
+		 * @throws Exception if the provided private key cannot be converted to valid PrivateKey
+		 */
+		public static PrivateKey privateKey(X509Certificate cert, String key) throws Exception
+		{
+			String keyData = null;
+			if( key.startsWith("storage://") )
+				keyData = new String(URI.create(key).toURL().openConnection().getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
+			else
+				keyData = key;
+			
+			keyData = keyData.replaceAll("\\s", "").replaceFirst(".*?-+[A-Z ]+-+", "").replaceFirst("-+[A-Z ]+-+.*$", "");
+			byte[] pk = Base64.getDecoder().decode(keyData);
+			PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(pk);
+			KeyFactory factory2 = KeyFactory.getInstance(cert.getPublicKey().getAlgorithm());
+			PrivateKey key2 = factory2.generatePrivate(spec);
+			
+			return key2;
+		}
+		
+		/**
+		 * Forces the client connection to authenticate with the provided certificate against the server.
+		 * @param certificate the PEM-encoded client certificate, or a valid 'storage://' URL
+		 * @param key the matching PEM-encoded private key, or a valid 'storage://' URL
+		 * @return this
+		 * @throws Exception if the provided arguments cannot be converted to valid X509Certificate and PrivateKey
+		 */
+		public SecurityOptions withClientCertificate(String certificate, String key) throws Exception
+		{
+			if( certificate == null || key == null ) { serverCertificate = null; return this; }
+			
+			X509Certificate cert = certificate(certificate);
+			PrivateKey key2 = privateKey(cert, key);
+			
+			return withClientCertificate(cert, key2);
+		}
+		
 		/**
 		 * Forces the client connection to authenticate with the provided certificate against the server.
 		 * @param certificate the client certificate
@@ -185,17 +256,7 @@ public abstract class Network extends Manager.Type
 			// PRIVATE KEY
 			// =============
 			
-			String keyData = null;
-			if( key.startsWith("storage://") )
-				keyData = new String(URI.create(key).toURL().openConnection().getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
-			else
-				keyData = key;
-			
-			keyData = keyData.replaceAll("\r?\n", "").replaceFirst(".*?-+[A-Z ]+-+", "").replaceFirst("-+[A-Z ]+-+.*$", "");
-			byte[] pk = Base64.getDecoder().decode(keyData);
-			PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(pk);
-			KeyFactory factory2 = KeyFactory.getInstance(cert.getPublicKey().getAlgorithm());
-			PrivateKey key2 = factory2.generatePrivate(spec);
+			PrivateKey key2 = privateKey(cert, key);
 			
 			return withServerCertificate(cert, key2, chainCerts);
 		}
@@ -471,20 +532,22 @@ public abstract class Network extends Manager.Type
 	{
 		return new X509TrustManager()
 		{
-			public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType)
+			public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) throws CertificateException
 			{
 				if( certs != null && certs.length > 0 && options != null && options.clientCertificateVerifier() != null )
 				{
 					// we only give the actual cert, not the chain
-					options.clientCertificateVerifier().accept(certs[0]);
+					try { options.clientCertificateVerifier().accept(certs[0]); }
+					catch(Exception e) { throw new CertificateException("Client certificate not trusted"); }
 				}
 			}
-			public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType)
+			public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) throws CertificateException
 			{
 				if( certs != null && certs.length > 0 && options != null && options.serverCertificateVerifier() != null )
 				{
 					// we only give the actual cert, not the chain
-					options.serverCertificateVerifier().accept(certs[0]);
+					try { options.serverCertificateVerifier().accept(certs[0]); }
+					catch(Exception e) { throw new CertificateException("Server certificate not trusted"); }
 				}
 			}
 			private final X509Certificate[] empty = new java.security.cert.X509Certificate[0];

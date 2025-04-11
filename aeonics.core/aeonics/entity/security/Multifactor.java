@@ -243,7 +243,7 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 					.put("period", Manager.of(Config.class).get(type(), "otpperiod"))
 					.put("digits", Manager.of(Config.class).get(type(), "otpdigits"))
 					.put("algorithm", Manager.of(Config.class).get(type(), "otpalgorithm"));
-				
+System.out.println(type() + ":" + "otpissuer = " + Manager.of(Config.class).get(type(), "otpissuer").asString());
 				return info
 					.put("url", "otpauth://totp/" 
 						+ URLEncoder.encode(Manager.of(Config.class).get(type(), "otpissuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") + ":" 

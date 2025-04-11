@@ -1,12 +1,10 @@
 package aeonics.manager;
 
-import java.util.Locale;
 import java.util.Map;
 
 import aeonics.data.Data;
 import aeonics.entity.Entity;
 import aeonics.template.Parameter;
-import aeonics.util.StringUtils;
 import aeonics.util.Tuples.Tuple;
 import aeonics.util.Functions.BiConsumer;
 
@@ -23,6 +21,30 @@ import aeonics.util.Functions.BiConsumer;
 public abstract class Config extends Manager.Type
 {
 	/**
+	 * Standard config name sanitization.
+	 * Replaces all non alphanumeric characters with a "." (dot) character and converts to lower case, and skips all whitespace characters.
+	 * @param name the input name
+	 * @return the sanitized name
+	 */
+	public static final String sanitize(String name)
+	{
+		StringBuilder sb = new StringBuilder(name.length());
+		for( int i = 0; i < name.length(); i++ )
+		{
+			char c = name.charAt(i);
+			if (Character.isWhitespace(c))
+				continue;
+			else if( c >= 'a' && c <= 'z' || c >= '0' && c <= '9' )
+				sb.append(c);
+			else if( c >= 'A' && c <= 'Z' )
+				sb.append((char)(c + 32)); // ASCII lowercase conversion
+			else
+				sb.append('.');
+		}
+		return sb.toString();
+	}
+	
+	/**
 	 * Hardcoded manager type
 	 */
 	public final Class<? extends Manager.Type> manager() { return Config.class; }
@@ -35,25 +57,23 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Returns the normalized imploded parameter name based on the type and friendly name.
-	 * <p>The normalization process is:</p>
-	 * <pre>type.getName().toLowerCase().replace('_', '.') + ":" + name.toLowerCase().replace('_', '.');</pre>
 	 * @see #explodeName(String)
+	 * @see #sanitize(String)
 	 * @param type the parameter type
 	 * @param name the parameter friendly name
 	 * @return the normalized parameter name
 	 */
-	public static String implodeName(Class<?> type, String name) { return implodeName(StringUtils.toLowerCase(type), name); }
+	public static String implodeName(Class<?> type, String name) { return implodeName(sanitize(type.getName()), name); }
 	
 	/**
 	 * Returns the normalized imploded parameter name based on the type and friendly name.
-	 * <p>The normalization process is:</p>
-	 * <pre>type.toLowerCase().replace('_', '.') + ":" + name.toLowerCase().replace('_', '.');</pre>
 	 * @see #explodeName(String)
-	 * @param type the parameter type
+	 * @see #sanitize(String)
+	 * @param type the parameter type 
 	 * @param name the parameter friendly name
 	 * @return the normalized parameter name
 	 */
-	public static String implodeName(String type, String name) { return type.toLowerCase(Locale.ROOT).replace('_', '.') + ":" + name.toLowerCase(Locale.ROOT).replace('_', '.'); }
+	public static String implodeName(String type, String name) { return sanitize(type) + ":" + sanitize(name); }
 	
 	/**
 	 * Returns the normalized imploded parameter name based on the normalized exploded name.
@@ -71,7 +91,6 @@ public abstract class Config extends Manager.Type
 	 */
 	public static Tuple<String, String> explodeName(String name)
 	{
-		name = StringUtils.trim(name.toLowerCase(Locale.ROOT).replace('_', '.'), '.', ' ');
 		int delimiter = name.indexOf(':');
 		
 		// there was no ':' so split based on the last '.' instead
@@ -79,16 +98,17 @@ public abstract class Config extends Manager.Type
 		
 		// there was no '.'
 		if( delimiter < 0 )
-			return Tuple.of("system", name);
+			return Tuple.of("system", sanitize(name));
 		else
-			return Tuple.of(name.substring(0, delimiter), name.substring(delimiter+1));
+			return Tuple.of(sanitize(name.substring(0, delimiter)), sanitize(name.substring(delimiter+1)));
 	}
 	
 	/**
 	 * Declares a new common configuration parameter for the target entity type.
 	 * Redeclaring an existing parameter does not change the current value, only the definition.
-	 * @param type the entity type (should be or will be converted to lower case).
+	 * @param type the entity type (will be sanitized).
 	 * @param parameter the parameter definition
+	 * @see #sanitize(String)
 	 */
 	public abstract void declare(String type, Parameter parameter);
 	
@@ -100,52 +120,74 @@ public abstract class Config extends Manager.Type
 	 */
 	public void declare(Class<?> type, Parameter parameter)
 	{
-		declare(StringUtils.toLowerCase(type), parameter);
+		declare(type.getName(), parameter);
 	}
 	
 	/**
 	 * Returns the parameter definition for the target entity type.
-	 * @param type the entity type
-	 * @param parameter the parameter name
+	 * @param type the entity type (will be sanitized)
+	 * @param parameter the parameter name (will be sanitized)
 	 * @return the parameter definition or null if the parameter is not found
+	 * @see #sanitize(String)
 	 */
 	public abstract Parameter definition(String type, String parameter);
 	
 	/**
 	 * Returns the parameter definition for the target entity type.
-	 * @param type the entity type
-	 * @param parameter the parameter name
+	 * @param type the entity type (will be sanitized)
+	 * @param parameter the parameter name (will be sanitized)
 	 * @return the parameter definition or null if the parameter is not found
+	 * @see #sanitize(String)
 	 */
 	public Parameter definition(Class<?> type, String parameter)
 	{
-		return definition(StringUtils.toLowerCase(type), parameter);
+		return definition(type.getName(), parameter);
+	}
+	
+	/**
+	 * Returns the parameter definition for the specified concatenated key.
+	 * The key will be sanitized and split by '.': <code>Entity.Type.NAME</code> will be converted to the configuration 
+	 * parameter <code>entity type &gt; name</code>
+	 * @param key the parameter name (will be sanitized)
+	 * @return the parameter definition or null if the parameter is not found
+	 * @see #sanitize(String)
+	 */
+	public Parameter definition(String key)
+	{
+		if( key == null || key.isBlank() ) return null;
+		
+		Tuple<String, String> name = explodeName(key);
+		
+		return definition(name.a, name.b);
 	}
 	
 	/**
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
-	 * @param type the entity type (should be or will be converted to lower case)
-	 * @param name the name of the configuration parameter
+	 * @param type the entity type (will be sanitized)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
+	 * @see #sanitize(String)
 	 */
 	public abstract Data get(String type, String name);
 	
 	/**
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
 	 * @param type the entity type
-	 * @param name the name of the configuration parameter
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
+	 * @see #sanitize(String)
 	 */
 	public Data get(Class<?> type, String name)
 	{
-		return get(StringUtils.toLowerCase(type), name);
+		return get(type.getName(), name);
 	}
 	
 	/**
 	 * Fetches the configuration parameter value for the specified entity type and parameter name.
 	 * @param entity the entity instance. Its {@link Entity#type()} method will be used.
-	 * @param name the name of the configuration parameter
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
+	 * @see #sanitize(String)
 	 */
 	public Data get(Entity entity, String name)
 	{
@@ -154,10 +196,11 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Fetches the configuration parameter value for the specified concatenated key.
-	 * The key will be split by '_' or '.' and converted to lower case: <code>Entity.Type.NAME</code> will be converted to the configuration 
+	 * The key will be sanitized and split by '.': <code>Entity.Type.NAME</code> will be converted to the configuration 
 	 * parameter <code>entity type &gt; name</code>
-	 * @param key the parameter name with at least two components separated by a '.' or a '_'
+	 * @param key the parameter name (will be sanitized)
 	 * @return the configuration parameter value or {@link Data#empty()} if there is no value
+	 * @see #sanitize(String)
 	 */
 	public Data get(String key)
 	{
@@ -170,28 +213,31 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Checks if the configuration parameter value for the specified entity type and parameter name is set.
-	 * @param type the entity type (should be or will be converted to lower case)
-	 * @param name the name of the configuration parameter
+	 * @param type the entity type (will be sanitized)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return true if the configuration parameter is set, regardless of its value
+	 * @see #sanitize(String)
 	 */
 	public abstract boolean contains(String type, String name);
 	
 	/**
 	 * Checks if the configuration parameter value for the specified entity type and parameter name is set.
 	 * @param type the entity type
-	 * @param name the name of the configuration parameter
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return true if the configuration parameter is set, regardless of its value
+	 * @see #sanitize(String)
 	 */
 	public boolean contains(Class<?> type, String name)
 	{
-		return contains(StringUtils.toLowerCase(type), name);
+		return contains(type.getName(), name);
 	}
 	
 	/**
 	 * Checks if the configuration parameter value for the specified entity type and parameter name is set.
 	 * @param entity the entity instance. Its {@link Entity#type()} method will be used.
-	 * @param name the name of the configuration parameter
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return true if the configuration parameter is set, regardless of its value
+	 * @see #sanitize(String)
 	 */
 	public boolean contains(Entity entity, String name)
 	{
@@ -200,10 +246,11 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Checks if the configuration parameter value for the specified concatenated key is set.
-	 * The key will be split by '_' or '.' and converted to lower case: <code>Entity.Type.NAME</code> will be converted to the configuration 
+	 * The key will be sanitized and split by '.': <code>Entity.Type.NAME</code> will be converted to the configuration 
 	 * parameter <code>entity type &gt; name</code>
-	 * @param key the parameter name with at least two components separated by a '.' or a '_'
+	 * @param key the parameter name (will be sanitized)
 	 * @return true if the configuration parameter is set, regardless of its value
+	 * @see #sanitize(String)
 	 */
 	public boolean contains(String key)
 	{
@@ -216,34 +263,37 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Sets the value of the specified configuration parameter. 
-	 * @param type the entity type (should be or will be converted to lower case)
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param type the entity type (will be sanitized)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @param value the new parameter value
 	 * @return the previous value associated with that parameter if any
 	 * @throws IllegalArgumentException if the value does not match the parameter requirements
+	 * @see #sanitize(String)
 	 */
 	public abstract Data set(String type, String name, Object value);
 	
 	/**
 	 * Sets the value of the specified configuration parameter. 
 	 * @param type the entity type
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @param value the new parameter value
 	 * @return the previous value associated with that parameter if any
 	 * @throws IllegalArgumentException if the value does not match the parameter requirements
+	 * @see #sanitize(String)
 	 */
 	public Data set(Class<?> type, String name, Object value)
 	{
-		return set(StringUtils.toLowerCase(type), name, value);
+		return set(type.getName(), name, value);
 	}
 	
 	/**
 	 * Sets the value of the specified configuration parameter. 
 	 * @param entity the entity instance. Its {@link Entity#type()} method will be used.
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @param value the new parameter value
 	 * @return the previous value associated with that parameter if any
 	 * @throws IllegalArgumentException if the value does not match the parameter requirements
+	 * @see #sanitize(String)
 	 */
 	public Data set(Entity entity, String name, Object value)
 	{
@@ -252,11 +302,12 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Sets the value of the specified concatenated configuration parameter.
-	 * The key will be split by '_' or '.' and converted to lower case: <code>Entity.Type.NAME</code> will be converted 
+	 * The key will be sanitized and split by '.': <code>Entity.Type.NAME</code> will be converted 
 	 * to the configuration parameter <code>entity type &gt; name</code>
-	 * @param key the parameter name with at least two components separated by a '.' or a '_'
+	 * @param key the parameter name (will be sanitized)
 	 * @param value the new parameter value
 	 * @return the previous value associated with that parameter if any, or null if the key is invalid
+	 * @see #sanitize(String)
 	 */
 	public Data set(String key, Object value)
 	{
@@ -269,28 +320,31 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Removes the value of the specified configuration parameter. 
-	 * @param type the entity type (should be or will be converted to lower case)
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param type the entity type (will be sanitized)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return the previous value associated with that parameter if any
+	 * @see #sanitize(String)
 	 */
 	public abstract Data remove(String type, String name);
 	
 	/**
 	 * Removes the value of the specified configuration parameter. 
 	 * @param type the entity type
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return the previous value associated with that parameter if any
+	 * @see #sanitize(String)
 	 */
 	public Data remove(Class<?> type, String name)
 	{
-		return remove(StringUtils.toLowerCase(type), name);
+		return remove(type.getName(), name);
 	}
 	
 	/**
 	 * Removes the value of the specified configuration parameter. 
 	 * @param entity the entity instance. Its {@link Entity#type()} method will be used.
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @return the previous value associated with that parameter if any
+	 * @see #sanitize(String)
 	 */
 	public Data remove(Entity entity, String name)
 	{
@@ -299,10 +353,11 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Removes the value of the specified concatenated configuration parameter.
-	 * The key will be split by '_' or '.' and converted to lower case: <code>Entity.Type.NAME</code> will be converted 
+	 * The key will be sanitized an split by '.': <code>Entity.Type.NAME</code> will be converted 
 	 * to the configuration parameter <code>entity type &gt; name</code>
-	 * @param key the parameter name with at least two components separated by a '.' or a '_'
+	 * @param key the parameter name (will be sanitized)
 	 * @return the previous value associated with that parameter if any
+	 * @see #sanitize(String)
 	 */
 	public Data remove(String key)
 	{
@@ -315,10 +370,11 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Adds a callback that will be triggered when the config value changes.
-	 * The key will be split by '_' or '.' and converted to lower case: <code>Entity.Type.NAME</code> will be converted 
+	 * The key will be sanitized and split by '.': <code>Entity.Type.NAME</code> will be converted 
 	 * to the configuration parameter <code>entity type &gt; name</code>
-	 * @param key the parameter name with at least two components separated by a '.' or a '_'
+	 * @param key the parameter name (will be sanitized)
 	 * @param callback the callback function, it will receive a {@link Tuple} with the full config key and the value
+	 * @see #sanitize(String)
 	 */
 	public void watch(String key, BiConsumer<String, Data> callback)
 	{
@@ -332,19 +388,21 @@ public abstract class Config extends Manager.Type
 	/**
 	 * Adds a callback that will be triggered when the config value changes.
 	 * @param type the entity type
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @param callback the callback function, it will receive a {@link Tuple} with the full config key and the value
+	 * @see #sanitize(String)
 	 */
 	public void watch(Class<?> type, String name, BiConsumer<String, Data> callback)
 	{
-		watch(StringUtils.toLowerCase(type), name, callback);
+		watch(type.getName(), name, callback);
 	}
 	
 	/**
 	 * Adds a callback that will be triggered when the config value changes.
 	 * @param entity the entity instance. Its {@link Entity#type()} method will be used.
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @param callback the callback function, it will receive a {@link Tuple} with the full config key and the value
+	 * @see #sanitize(String)
 	 */
 	public void watch(Entity entity, String name, BiConsumer<String, Data> callback)
 	{
@@ -353,16 +411,18 @@ public abstract class Config extends Manager.Type
 	
 	/**
 	 * Adds a callback that will be triggered when the config value changes.
-	 * @param type the entity type
-	 * @param name the name of the configuration parameter (should be or will be converted to lower case)
+	 * @param type the entity type (will be sanitized)
+	 * @param name the name of the configuration parameter (will be sanitized)
 	 * @param callback the callback function, it will receive a {@link Tuple} with the full config key and the value
+	 * @see #sanitize(String)
 	 */
 	public abstract void watch(String type, String name, BiConsumer<String, Data> callback);
 	
 	/**
 	 * Returns all the values for all the parameters of the given entity type.
-	 * @param type the entity type (should be or will be converted to lower case)
+	 * @param type the entity type (will be sanitized)
 	 * @return all matching parameters and their value
+	 * @see #sanitize(String)
 	 */
 	public abstract Map<String, Data> all(String type);
 	
@@ -373,7 +433,7 @@ public abstract class Config extends Manager.Type
 	 */
 	public Map<String, Data> all(Class<?> type)
 	{
-		return all(StringUtils.toLowerCase(type));
+		return all(type.getName());
 	}
 	
 	/**

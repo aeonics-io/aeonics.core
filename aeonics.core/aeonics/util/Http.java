@@ -8,10 +8,13 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.cert.X509Certificate;
 import java.util.Map;
 import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 
 import aeonics.data.Data;
 import aeonics.manager.Network;
@@ -22,6 +25,46 @@ import aeonics.manager.Network;
  */
 public class Http
 {
+	/**
+	 * Returns an SSLContext to validate a mutual TLS authentication with the server.
+	 * @param clientCertificate the client certificate as PEM format
+	 * @param clientKey the client private key as PEM format
+	 * @param serverCertificate the server certificate (or signing authority) to authenticate the server
+	 * @return a mTLS SSLContext
+	 * @throws Exception in case of invalid parameters
+	 */
+	public static SSLContext mTLS(String clientCertificate, String clientKey, String serverCertificate) throws Exception
+	{
+		final X509Certificate trusted = Network.SecurityOptions.certificate(serverCertificate);
+		
+		return Network.sslContext(new Network.SecurityOptions()
+			.withClientCertificate(clientCertificate, clientKey)
+			.withServerVerifier(cert ->
+			{
+				try
+				{
+					cert.checkValidity();
+					if( cert.equals(trusted) ) return;
+					if( trusted.getBasicConstraints() >= 0 ) // trusted is a CA that can issue the server certificate
+					{
+						boolean[] keyUsage = trusted.getKeyUsage();
+			            boolean hasKeyCertSign = keyUsage == null || (keyUsage.length > 5 && keyUsage[5]);
+						
+						if( hasKeyCertSign )
+						{
+							cert.verify(trusted.getPublicKey());
+							return;
+						}
+					}
+					throw new RuntimeException();
+				}
+				catch(GeneralSecurityException e)
+				{
+					throw new RuntimeException();
+				}
+			}), true);
+	}
+	
 	/**
 	 * The maximum number of milliseconds to wait before the connection is established.
 	 * This does not affect the response time once the connection is established.
@@ -106,7 +149,20 @@ public class Http
 	 * @return the response
 	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
 	 */
-	public static Data post(String url, Data body, Data headers, String method, int timeout)
+	public static Data post(String url, Data body, Data headers, String method, int timeout) { return post(url, body, headers, method, timeout, null); }
+	
+	/**
+	 * Fetches the specified resource using the provided method and include the parameters in the body of the request
+	 * @param url the url
+	 * @param body the content to send in key/value pairs
+	 * @param headers the http request headers
+	 * @param method the http method
+	 * @param timeout the request timeout in milliseconds. 0 means infinite.
+	 * @param context the SSL context to be used (can be null for permissive defaults)
+	 * @return the response
+	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
+	 */
+	public static Data post(String url, Data body, Data headers, String method, int timeout, SSLContext context)
 	{
 		HttpURLConnection connection = null;
 		
@@ -129,7 +185,10 @@ public class Http
 			
 			if( connection instanceof HttpsURLConnection )
 			{
-				((HttpsURLConnection)connection).setSSLSocketFactory(Network.sslContext(null, true).getSocketFactory());
+				if( context != null )
+					((HttpsURLConnection)connection).setSSLSocketFactory(context.getSocketFactory());
+				else
+					((HttpsURLConnection)connection).setSSLSocketFactory(Network.sslContext(null, true).getSocketFactory());
 				((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
 			}
 			
@@ -282,7 +341,20 @@ public class Http
 	 * @return the response
 	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
 	 */
-	public static Data get(String url, Data queryString, Data headers, String method, int timeout)
+	public static Data get(String url, Data queryString, Data headers, String method, int timeout) { return get(url, queryString, headers, method, timeout, null); }
+	
+	/**
+	 * Fetches the specified resource using the provided method and include the parameters in the query string of the request
+	 * @param url the url
+	 * @param queryString the content to append to the url in key/value pairs
+	 * @param headers the http request headers
+	 * @param method the http method
+	 * @param timeout the request timeout in milliseconds. 0 means infinite.
+	 * @param context the SSL context to be used (can be null for permissive defaults)
+	 * @return the response
+	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
+	 */
+	public static Data get(String url, Data queryString, Data headers, String method, int timeout, SSLContext context)
 	{
 		HttpURLConnection connection = null;
 		
@@ -322,7 +394,10 @@ public class Http
 			
 			if( connection instanceof HttpsURLConnection )
 			{
-				((HttpsURLConnection)connection).setSSLSocketFactory(Network.sslContext(null, true).getSocketFactory());
+				if( context != null )
+					((HttpsURLConnection)connection).setSSLSocketFactory(context.getSocketFactory());
+				else
+					((HttpsURLConnection)connection).setSSLSocketFactory(Network.sslContext(null, true).getSocketFactory());
 				((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
 			}
 			
