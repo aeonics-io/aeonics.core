@@ -76,13 +76,26 @@ public abstract class Network extends Manager.Type
 		 */
 		public static X509Certificate certificate(String certificate) throws Exception
 		{
-			if( certificate == null || certificate.isBlank() ) throw new IllegalArgumentException("Empty certificate");
+			X509Certificate[] certs = certificates(certificate);
+			if( certs.length > 0 ) return certs[0];
+			else throw new IllegalArgumentException("Empty certificate");
+		}
+		
+		/**
+		 * Parses and returns all certificates from the given PEM-encoded certificate, or a valid 'storage://' URL
+		 * @param certificates the PEM-encoded certificates, or a valid 'storage://' URL
+		 * @return the actual certificate chain
+		 * @throws Exception if the provided certificates cannot be converted to valid X509Certificate
+		 */
+		public static X509Certificate[] certificates(String certificates) throws Exception
+		{
+			if( certificates == null || certificates.isBlank() ) throw new IllegalArgumentException("Empty certificate");
 			
 			InputStream certData = null;
-			if( certificate.startsWith("storage://") )
-				certData = URI.create(certificate).toURL().openConnection().getInputStream();
+			if( certificates.startsWith("storage://") )
+				certData = URI.create(certificates).toURL().openConnection().getInputStream();
 			else
-				certData = new ByteArrayInputStream(certificate.getBytes(StandardCharsets.ISO_8859_1));
+				certData = new ByteArrayInputStream(certificates.getBytes(StandardCharsets.ISO_8859_1));
 			
 			CertificateFactory factory = CertificateFactory.getInstance("X.509");
 			Object[] os = factory.generateCertificates(certData).toArray();
@@ -90,9 +103,8 @@ public abstract class Network extends Manager.Type
 			X509Certificate[] certs = new X509Certificate[os.length];
 			for( int i = 0; i < os.length; i++ )
 				certs[i] = (X509Certificate) os[i];
-			X509Certificate cert = certs[0];
 			
-			return cert;
+			return certs;
 		}
 		
 		/**
@@ -815,6 +827,12 @@ public abstract class Network extends Manager.Type
 		 * @return the ALPN or an empty string if no protocol was negotiated or if ALPN is not available
 		 */
 		public String alpn();
+		
+		/**
+		 * Returns the Server Name Indication (SNI) once the TLS connection is established
+		 * @return the SNI or an empty string if none was specified in the TLS handshake
+		 */
+		public String sni();
 		
 		/**
 		 * Returns true if this connection has not been closed

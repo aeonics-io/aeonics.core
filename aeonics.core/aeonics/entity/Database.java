@@ -792,7 +792,7 @@ public class Database extends Item<Database.Type>
 		/**
 		 * Returns the list of columns in the specified table.
 		 * 
-		 * <p>The returned data is a list of table descriptions that include:</p>
+		 * <p>The returned data is a list of column descriptions that include:</p>
 		 * <ul>
 		 * <li><b>name</b>: the column name</li>
 		 * <li><b>size</b>: the column data type size</li>

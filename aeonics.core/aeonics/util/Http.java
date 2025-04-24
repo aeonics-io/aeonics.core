@@ -1,20 +1,29 @@
 package aeonics.util;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import aeonics.data.Data;
 import aeonics.manager.Network;
@@ -63,6 +72,34 @@ public class Http
 					throw new RuntimeException();
 				}
 			}), true);
+	}
+	
+	private static SSLSocketFactory __bugfix(final SSLSocketFactory f, final String host)
+	{
+		// there is an old bug that has regression in which the https connection
+		// does not send SNI in some cases (i.e. if the hostnameVerifier is set).
+		// the solution is that the socket factory should not allow to create unconnected sockets
+		
+		// see bug 6771432 and 8144566
+		
+		final SSLParameters sni = new SSLParameters();
+		sni.setServerNames(List.of(new SNIHostName(host)));
+		
+		return new SSLSocketFactory() {
+			private Socket setSNI(Socket s) { ((SSLSocket) s).setSSLParameters(sni); return s; }
+			public String[] getDefaultCipherSuites() { return f.getDefaultCipherSuites(); }
+			public String[] getSupportedCipherSuites() { return f.getSupportedCipherSuites(); }
+			public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException {
+				return setSNI(f.createSocket(s, host, port, autoClose)); }
+			public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
+				return setSNI(f.createSocket(host, port)); }
+			public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException, UnknownHostException {
+				return setSNI(f.createSocket(host, port, localHost, localPort)); }
+			public Socket createSocket(InetAddress host, int port) throws IOException {
+				return setSNI(f.createSocket(host, port)); }
+			public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
+				return setSNI(f.createSocket(address, port, localAddress, localPort)); }
+		};
 	}
 	
 	/**
@@ -186,9 +223,9 @@ public class Http
 			if( connection instanceof HttpsURLConnection )
 			{
 				if( context != null )
-					((HttpsURLConnection)connection).setSSLSocketFactory(context.getSocketFactory());
+					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(context.getSocketFactory(), u.getHost()));
 				else
-					((HttpsURLConnection)connection).setSSLSocketFactory(Network.sslContext(null, true).getSocketFactory());
+					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(Network.sslContext(null, true).getSocketFactory(), u.getHost()));
 				((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
 			}
 			
@@ -395,9 +432,9 @@ public class Http
 			if( connection instanceof HttpsURLConnection )
 			{
 				if( context != null )
-					((HttpsURLConnection)connection).setSSLSocketFactory(context.getSocketFactory());
+					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(context.getSocketFactory(), u.getHost()));
 				else
-					((HttpsURLConnection)connection).setSSLSocketFactory(Network.sslContext(null, true).getSocketFactory());
+					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(Network.sslContext(null, true).getSocketFactory(), u.getHost()));
 				((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
 			}
 			

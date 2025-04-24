@@ -239,11 +239,11 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 					throw new IllegalArgumentException("Invalid user");
 				
 				Data info = Data.map()
-					.put("secret", base32Encode(generateSecret()))
+					.put("secret", randomSecret())
 					.put("period", Manager.of(Config.class).get(type(), "otpperiod"))
 					.put("digits", Manager.of(Config.class).get(type(), "otpdigits"))
 					.put("algorithm", Manager.of(Config.class).get(type(), "otpalgorithm"));
-System.out.println(type() + ":" + "otpissuer = " + Manager.of(Config.class).get(type(), "otpissuer").asString());
+				
 				return info
 					.put("url", "otpauth://totp/" 
 						+ URLEncoder.encode(Manager.of(Config.class).get(type(), "otpissuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") + ":" 
@@ -346,7 +346,37 @@ System.out.println(type() + ":" + "otpissuer = " + Manager.of(Config.class).get(
 		        
 		        return current == totp;
 			}
-		
+			
+			public static String randomSecret() { return secret(Manager.of(Security.class).randomHash()); }
+			
+			public static String secret(String seed) { return base32Encode(generateSecret(seed.getBytes())); }
+			
+			public static String get(String seed)
+			{
+				try
+				{
+					long time = System.currentTimeMillis();
+					byte[] secret = generateSecret(seed.getBytes());
+					
+					long timeslice = time / 1000L / Manager.of(Config.class).get(TOTP.class, "otpperiod").asLong();
+			        Mac mac = Mac.getInstance("Hmac" + Manager.of(Config.class).get(TOTP.class, "otpalgorithm").asString());
+			        mac.init(new SecretKeySpec(secret, "Hmac" + Manager.of(Config.class).get(TOTP.class, "otpalgorithm").asString()));
+			        byte[] hmac = mac.doFinal(ByteBuffer.allocate(8).putLong(timeslice).array());
+			        
+			        int offset = hmac[hmac.length - 1] & 0x0f;
+			        int binary = ((hmac[offset] & 0x7f) << 24) |
+			                      ((hmac[offset + 1] & 0xff) << 16) |
+			                      ((hmac[offset + 2] & 0xff) << 8) |
+			                      (hmac[offset + 3] & 0xff);
+			        int totp = binary % (int) Math.pow(10, Manager.of(Config.class).get(TOTP.class, "otpdigits").asInt());
+			        return String.format("%0" + Manager.of(Config.class).get(TOTP.class, "otpdigits").asInt() + "d", totp);
+				}
+				catch(Exception e)
+				{
+					return null;
+				}
+			}
+			
 			private static final char[] BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toCharArray();
 			private static String base32Encode(byte[] data)
 			{
@@ -405,13 +435,14 @@ System.out.println(type() + ":" + "otpissuer = " + Manager.of(Config.class).get(
 				return result;
 			}
 			
-			private static byte[] generateSecret()
+			private static byte[] generateSecret(byte[] seed)
 			{
-				byte[] hash = Manager.of(Security.class).randomHash().getBytes();
+				if( seed == null || seed.length < 20 ) throw new SecurityException("Invalid or weak seed");
+				
 				byte[] secret = new byte[6];
 				
-				for( int i = 0; i < 6; i++ ) secret[i] = hash[i];
-				for( int i = 6; i < hash.length; i++ ) secret[i%6] ^= hash[i];
+				for( int i = 0; i < 6; i++ ) secret[i] = seed[i];
+				for( int i = 6; i < seed.length; i++ ) secret[i%6] ^= seed[i];
 				
 				return secret;
 			}

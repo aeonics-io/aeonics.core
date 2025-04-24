@@ -1,6 +1,7 @@
 package aeonics.data;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -36,6 +37,8 @@ public interface Data extends Iterable<Data>
 		if( item instanceof Data )
 			return (Data) item;
 		if( item instanceof Throwable )
+			return new DataObject(item);
+		if( item instanceof Path )
 			return new DataObject(item);
 		if( item instanceof byte[] )
 			return new DataObject(new String((byte[])item, StandardCharsets.ISO_8859_1));
@@ -498,6 +501,24 @@ public interface Data extends Iterable<Data>
 	 * @return the real object value
 	 */
 	public <T> T get();
+	
+	/**
+	 * Returns true if an object is found in this data values
+	 * @param value the element to match
+	 * @return true if the value is contained in this data object
+	 */
+	public default boolean contains(Object value)
+	{
+		if( isList() || isMap() )
+		{
+			for( Data i : this )
+				if( i.equals(value) )
+					return true;
+			return false;
+		}
+		
+		return equals(value);
+	}
 	
 	/**
 	 * Returns true if an object can be fetched with the specified key
