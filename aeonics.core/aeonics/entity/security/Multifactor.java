@@ -248,7 +248,7 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 					.put("url", "otpauth://totp/" 
 						+ URLEncoder.encode(Manager.of(Config.class).get(type(), "otpissuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") + ":" 
 						+ URLEncoder.encode(user.name(), StandardCharsets.UTF_8).replace("+", "%20") + "?" +
-						"secret=" + info.get("secret") +
+						"secret=" + info.asString("secret") +
 						"&issuer=" + URLEncoder.encode(Manager.of(Config.class).get(type(), "otpissuer").asString(), StandardCharsets.UTF_8).replace("+", "%20") +
 						"&algorithm=" + info.asString("algorithm") +
 						"&digits=" + info.asString("digits") +
