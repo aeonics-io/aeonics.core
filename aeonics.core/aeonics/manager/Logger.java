@@ -764,10 +764,7 @@ public abstract class Logger extends Manager.Type
 			{
 				if( level < level() || message == null || message.isBlank() ) return;
 				String text = toJson(level, type, message, params);
-				synchronized(System.out)
-				{
-					System.out.println(text);
-				}
+				System.out.println(text);
 			}
 		}
 

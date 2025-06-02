@@ -29,13 +29,13 @@ public class Parameter implements Documented
 {
 	/**
 	 * Creates a new parameter
-	 * @param name the parameter name (should be or will be converted to lower case)
+	 * @param name the parameter name
 	 * @throws IllegalArgumentException if the name is null or blank.
 	 */
 	public Parameter(String name)
 	{
 		if( name == null || name.isBlank() ) throw new IllegalArgumentException("Parameter name is mandatory");
-		this.name = StringUtils.toLowerCase(name);
+		this.name = name;
 	}
 	
 	/**

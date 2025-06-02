@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import aeonics.util.Internal;
 
@@ -478,6 +480,15 @@ public interface Data extends Iterable<Data>
 	// ==========================
 	// OTHER MAP/LIST METHODS
 	// ==========================
+	
+	/**
+	 * Returns a stream over the elements in this data as offered by the Iterable interface.
+	 * @return a stream over the elements in this data
+	 */
+	public default Stream<Data> stream()
+	{
+		return StreamSupport.stream(spliterator(), false);
+	}
 	
 	/**
 	 * Returns the mapped value

@@ -53,7 +53,11 @@ public class Queue extends Action
 				return super.acceptAction(message, input);
 			
 			Tuple<Message, Task<Void>> job = Tuple.of(message, Manager.of(Executor.class).normalPending());
-			synchronized(this)
+
+			// in order to avoid contention, we allow the limit to be passed in race conditions
+			// this avoids locking for nothing most of the time
+			
+			//synchronized(this)
 			{
 				if( limit > 0 && queue.size() >= limit )
 				{
@@ -82,7 +86,7 @@ public class Queue extends Action
 			while( true )
 			{
 				int current = parallel.get();
-				if( current >= concurrency ) return false;
+				if( concurrency > 0 && current >= concurrency ) return false;
 				if( parallel.compareAndSet(current, current + 1) ) break;
 			}
 			

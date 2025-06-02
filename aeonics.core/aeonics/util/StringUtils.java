@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.WeakHashMap;
 
+import aeonics.data.Data;
+
 /**
  * Simple fast alternatives to regular String operations
  */
@@ -64,6 +66,39 @@ public class StringUtils
 				v++;
 			}
 			mark = i+token.length();
+		}
+		b.append(text, mark, text.length());
+		
+		return b.toString();
+	}
+	
+	/**
+	 * Performs a substitution of all <code>{{name}}</code> tokens in the original text with the provided values.
+	 * If some tokens do not have a matching value, they are replaced by an empty string.
+	 * @param text the original text
+	 * @param values the values to substitute
+	 * @return the substituted text
+	 */
+	public static String substitute(String text, Data values)
+	{
+		if( text == null || text.isEmpty() ) return "";
+		if( values == null || !values.isMap() ) values = Data.map();
+		
+		StringBuilder b = new StringBuilder(text.length());
+		
+		int i = 0, mark = 0;
+		while( (i = text.indexOf("{{", mark)) != -1 )
+		{
+			b.append(text, mark, i);
+			
+			mark = i+2;
+			i = text.indexOf("}}", i+2);
+			if( i < 0 ) break;
+			
+			String name = text.substring(mark, i);
+			if( values.containsKey(name) ) b.append(values.asString(name));
+			
+			mark = i+2;
 		}
 		b.append(text, mark, text.length());
 		
