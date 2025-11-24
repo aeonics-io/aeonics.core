@@ -2,6 +2,9 @@ package aeonics.manager;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.Certificate;
 import java.util.Collection;
 import java.util.List;
 
@@ -107,6 +110,28 @@ public abstract class Security extends Manager.Type
 	public abstract String encrypt(byte[] value, byte[] key);
 	
 	/**
+	 * Encrypts the given value with a strong asymmetric key encryption method.
+	 * Use {@link #decrypt(String, PrivateKey)} to recover the original value.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the input to encrypt
+	 * @param key public key
+	 * @return the encrypted value in base64 format
+	 * @throws SecurityException if any error happens during encryption. For security purpose, the cause of the exception is discarded.
+	 */
+	public abstract String encrypt(byte[] value, PublicKey key);
+	
+	/**
+	 * Encrypts the given value with a strong asymmetric key encryption method.
+	 * Use {@link #decrypt(String, PrivateKey)} to recover the original value.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the input to encrypt
+	 * @param key public key
+	 * @return the encrypted value in base64 format
+	 * @throws SecurityException if any error happens during encryption. For security purpose, the cause of the exception is discarded.
+	 */
+	public String encrypt(byte[] value, Certificate key) { return encrypt(value, key.getPublicKey()); }
+	
+	/**
 	 * Decrypts the given value to recover the original text that was encrypted with {@link #encrypt(String, String)}.
 	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
 	 * @param value the encrypted text to decrypt in base64 format
@@ -125,6 +150,47 @@ public abstract class Security extends Manager.Type
 	 * @throws SecurityException if any error happens during decryption, including a key mismatch. For security purpose, the cause of the exception is discarded.
 	 */
 	public abstract byte[] decrypt(String value, byte[] key);
+	
+	/**
+	 * Decrypts the given value to recover the original value that was encrypted with {@link #encrypt(String, PublicKey)}.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the encrypted value to decrypt in base64 format
+	 * @param key the private key
+	 * @return the original value
+	 * @throws SecurityException if any error happens during decryption, including a key mismatch. For security purpose, the cause of the exception is discarded.
+	 */
+	public abstract byte[] decrypt(String value, PrivateKey key);
+	
+	/**
+	 * Verifies the signature of the given data.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param signature the base64 encoded signature
+	 * @param value the input to verify
+	 * @param key public key to check the signature
+	 * @return true if the signature matches, false otherwise
+	 */
+	public abstract boolean verify(String signature, byte[] value, PublicKey key);
+	
+	/**
+	 * Verifies the signature of the given data.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param signature the base64 encoded signature
+	 * @param value the input to verify
+	 * @param key public key to check the signature
+	 * @return true if the signature matches, false otherwise
+	 */
+	public boolean verify(String signature, byte[] value, Certificate key) { return verify(signature, value, key.getPublicKey()); }
+	
+	/**
+	 * Signs the given data.
+	 * Use {@link #verify(String, PublicKey)} to check the signature.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the input to sign
+	 * @param key private key
+	 * @return the signature in base64 format
+	 * @throws SecurityException if any error happens
+	 */
+	public abstract String sign(byte[] value, PrivateKey key);
 	
 	/**
 	 * Returns the list of {@link Provider} that may be able to authenticate the specified user.

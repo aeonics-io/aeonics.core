@@ -61,6 +61,7 @@ public class Json
 		StringBuilder e = new StringBuilder(s.length());
 		e.append(s, 0, i);
 		
+		boolean binary = false;
 		for( ; i < s.length(); i++ )
 		{
 			int cp = s.codePointAt(i);
@@ -87,19 +88,20 @@ public class Json
 					e.append('\\');
 					e.appendCodePoint(cp);
 					break;
-				case '\b': e.append("\\b"); break;
-				case '\f': e.append("\\f"); break;
+				case '\b': e.append("\\b"); binary = true; break;
+				case '\f': e.append("\\f"); binary = true; break;
 				case '\n': e.append("\\n"); break;
 				case '\r': e.append("\\r"); break;
 				case '\t': e.append("\\t"); break;
 				default:
-					if( cp <= 0x1F || cp == 0x7F || cp >= 0xF5 || cp == 0xC0 || cp == 0xC1 || (cp >= 0x80 && cp <= 0xBF))
+					if( binary || cp <= 0x1F || cp == 0x7F || cp >= 0xF5 || cp == 0xC0 || cp == 0xC1 || (cp >= 0x80 && cp <= 0xBF))
 					{
 						// definately not utf8
 						String unicode = "0000" + Integer.toString(cp, 16);
 						e.append("\\u");
 						for( int u = 4; u > 0; u-- )
 							e.append(unicode.charAt(unicode.length()-u));
+						 binary = true;
 					}
 					else if( cp <= 0x7E ) // ascii
 						e.appendCodePoint(cp);
@@ -108,9 +110,18 @@ public class Json
 						// maybe utf8
 						int utf8chars = 0;
 						int cp2 = 0;
-						if( (cp & 0xF8) == 0xF0 ) { utf8chars = 3; cp2 = cp & 0x7; }
-						else if( (cp & 0xF0) == 0xE0 ) { utf8chars = 2; cp2 = cp & 0xF; }
+						if( (cp & 0xF8) == 0xF0 ) { utf8chars = 3; cp2 = cp & 0x07; }
+						else if( (cp & 0xF0) == 0xE0 ) { utf8chars = 2; cp2 = cp & 0x0F; }
 						else if( (cp & 0xE0) == 0xC0 ) { utf8chars = 1; cp2 = cp & 0x1F; }
+						else
+						{
+							String unicode = "0000" + Integer.toString(cp, 16);
+							e.append("\\u");
+							for( int u = 4; u > 0; u-- )
+								e.append(unicode.charAt(unicode.length()-u));
+							binary = true;
+							break;
+						}
 						
 						if( i + utf8chars >= s.length() )
 						{
@@ -133,10 +144,27 @@ public class Json
 							if( !isValid ) cp2 = s.codePointAt(i);
 							else i += utf8chars;
 							
-							String unicode = "0000" + Integer.toString(cp2, 16);
-							e.append("\\u");
-							for( int u = 4; u > 0; u-- )
-								e.append(unicode.charAt(unicode.length()-u));
+							if( cp2 > 0xFFFF ) // must split on 2 unicode chars
+							{
+								cp2 -= 0x10000;
+								
+								String unicode = "0000" + Integer.toString(0xD800 | ((cp2 >> 10) & 0x3FF), 16);
+								e.append("\\u");
+								for( int u = 4; u > 0; u-- )
+									e.append(unicode.charAt(unicode.length()-u));
+								
+								unicode = "0000" + Integer.toString(0xDC00 | (cp2 & 0x3FF), 16);
+								e.append("\\u");
+								for( int u = 4; u > 0; u-- )
+									e.append(unicode.charAt(unicode.length()-u));
+							}
+							else
+							{
+								String unicode = "0000" + Integer.toString(cp2, 16);
+								e.append("\\u");
+								for( int u = 4; u > 0; u-- )
+									e.append(unicode.charAt(unicode.length()-u));
+							}
 						}
 					}
 			}
@@ -175,6 +203,7 @@ public class Json
 					case 'r':  u[size++] = '\r'; break;
 					case 't':  u[size++] = '\t'; break;
 					case 'f':  u[size++] = '\f'; break;
+					case 'b':  u[size++] = '\b'; break;
 					case '"':  u[size++] = '"'; break;
 					case '\'': u[size++] = '\''; break;
 					case '/':  u[size++] = '/'; break;

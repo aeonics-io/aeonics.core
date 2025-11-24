@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -57,45 +58,34 @@ public abstract class Storage extends Item<Storage.Type>
 	 * <li>parent directory '..' are honored</li>
 	 * <li>backslashes '\\' are converted to '/'</li>
 	 * <li>blank or null is converted to ""</li>
+	 * <li>control characters are removed</li>
 	 * </ul>
 	 * @param path the requested path
 	 * @return the normalized path
 	 */
 	public static String normalize(String path)
 	{
-		if( path == null || path.isBlank() ) path = "";
+		if( path == null || path.isBlank() ) return "";
 		
-		StringBuilder normalized = new StringBuilder();
-        int mark = 0;
-        boolean separator = false;
-        for (int i = 0; i <= path.length(); i++)
-        {
-        	if( i == path.length() || path.charAt(i) == '/' || path.charAt(i) == '\\' )
-        	{
-        		if( i - mark == 1 && path.charAt(mark) == '.' )
-        		{
-        			// case './'
-        		}
-        		else if( i - mark == 2 && path.charAt(mark) == '.' && path.charAt(mark + 1) == '.' )
-        		{
-        			// case '../'
-        			int lastSlash = normalized.lastIndexOf("/");
-                    if (lastSlash >= 0) normalized.delete(lastSlash, normalized.length());
-        		}
-        		else if( i != mark )
-        		{
-        			// case 'name/'
-        			if( mark > 0 && !separator ) normalized.append('/');
-        			normalized.append(path, mark, i);
-        		}
-        		mark = i + 1;
-        		separator = true;
-        	}
-        	else separator = false;
-        }
-        
-        if( normalized.length() > 0 && normalized.charAt(0) == '/' ) return normalized.substring(1);
-        return normalized.toString();
+		String[] parts = StringUtils.split(path.replace('\\', '/'), "/");
+		LinkedList<String> stack = new LinkedList<>();
+		for( String p : parts )
+		{
+			if( p.equals(".") ) { continue; }
+			if( p.equals("..") ) { if( stack.size() > 0 ) stack.removeLast(); continue; }
+			StringBuilder clean = new StringBuilder();
+            for( int i = 0; i < p.length(); i++ )
+            {
+            	char c = p.charAt(i);
+            	if( c >= ' ') clean.append(c);
+            }
+			stack.add(clean.toString());
+		}
+		
+		StringJoiner j = new StringJoiner("/");
+		for( String p : stack )
+			j.add(p);
+		return j.toString();
 	}
 	
 	/**

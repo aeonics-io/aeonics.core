@@ -172,6 +172,16 @@ public class Token implements Exportable
 	}
 	
 	/**
+	 * The validity from {@link #epoch} in ms.
+	 * A validity &lt;= 0 means unlimited.
+	 * @return the token validity 
+	 */
+	public long validity()
+	{
+		return validity;
+	}
+	
+	/**
 	 * Resets the start of validity of this token to now
 	 */
 	public void reset() { epoch = System.currentTimeMillis(); }
@@ -180,6 +190,15 @@ public class Token implements Exportable
 	 * List of scopes of this token
 	 */
 	protected Set<String> scopes = new HashSet<>();
+	
+	/**
+	 * Returns the token scopes
+	 * @return the token scopes
+	 */
+	public Set<String> scopes()
+	{
+		return scopes;
+	}
 	
 	/**
 	 * Returns whether or not this token applies to the specified scope

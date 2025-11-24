@@ -954,4 +954,67 @@ public class StringUtils
 		}
 		return true;
 	}
+	
+	/**
+	 * Returns a hex string representation of the input data
+	 * @param data the input data
+	 * @return upper case continuous hex string
+	 */
+	public static String toHex(byte[] data) { return toHexUpper(data); }
+	
+	/**
+	 * Returns a hex string representation of the input data
+	 * @param data the input data
+	 * @return lower case continuous hex string
+	 */
+	public static String toHexLower(byte[] data)
+	{
+		StringBuilder sb = new StringBuilder();
+        for( int i = 0; i < data.length; i++ )
+            sb.append(String.format("%02x", data[i]));
+        return sb.toString();
+	}
+	
+	/**
+	 * Returns a hex string representation of the input data
+	 * @param data the input data
+	 * @return upper case continuous hex string
+	 */
+	public static String toHexUpper(byte[] data)
+	{
+		StringBuilder sb = new StringBuilder();
+        for( int i = 0; i < data.length; i++ )
+            sb.append(String.format("%02X", data[i]));
+        return sb.toString();
+	}
+	
+	/**
+	 * Performs a substring with positive or negatives indices.
+	 * @param text the input text. If null, an empty string is returned.
+	 * @param start the start index. If positive, it starts from the beginning, if negative, it starts from the end. 
+	 * 		If the index is positive and larger than the size of the text, an empty result is returned. 
+	 * 		If the index is negative and larger than the size of the text, it starts at the beginning if the text.
+	 * @param end the end index. If positive, it counts form the beginning, if negative, it counts from the end.
+	 * 		If the index is positive and larger than the size of the text, it ends at the end of the text.
+	 * 		If the index is negative and larger than the size of the text, an empty result is returned.
+	 * 		If the index (in absolute position) is before the start, an empty result is returned.
+	 * @return the substring (never null)
+	 */
+	public static String substring(String text, int start, int end)
+	{
+		if( text == null || text.isEmpty() ) return "";
+		
+		int len = text.length();
+		
+		if (start < 0) start = len + start;
+		if (start < 0) start = 0;
+		if (start >= len) return "";
+		
+		if (end < 0) end = len + end;
+		if (end < 0) return "";
+		if (end > len) end = len;
+		
+		if (end <= start) return "";
+		return text.substring(start, end);
+	}
 }

@@ -469,7 +469,7 @@ public class Parameter implements Documented
 		/**
 		 * Rule for file name
 		 */
-		public static final Predicate<String> FILENAME = (String value) -> StringUtils.isComposedOf(value, "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789_.");
+		public static final Predicate<String> FILENAME = (String value) -> StringUtils.isComposedOf(value, "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789_.-");
 		
 		/**
 		 * Rule for URL

@@ -48,6 +48,9 @@ public class Tuples
 		 * @return a new one-value wrapper
 		 */
 		public static <X> Single<X> of(X a) { return new Single<X>(a); }
+		
+		@Override
+		public String toString() { return "[" + a + "]"; }
 	}
 	
 	// ===================
@@ -98,6 +101,9 @@ public class Tuples
 		 * @return a new two-value wrapper
 		 */
 		public static <X, Y> Tuple<X, Y> of(X a, Y b) { return new Tuple<X, Y>(a, b); }
+		
+		@Override
+		public String toString() { return "[" + a + ", " + b + "]"; }
 	}
 	
 	// ===================
@@ -157,6 +163,9 @@ public class Tuples
 		 * @return a new three-value wrapper
 		 */
 		public static <X, Y, Z> Triple<X, Y, Z> of(X a, Y b, Z c) { return new Triple<X, Y, Z>(a, b, c); }
+		
+		@Override
+		public String toString() { return "[" + a + ", " + b + ", " + c + "]"; }
 	}
 	
 	// ===================
@@ -225,5 +234,8 @@ public class Tuples
 		 * @return a new four-value wrapper
 		 */
 		public static <W, X, Y, Z> Quadruple<W, X, Y, Z> of(W a, X b, Y c, Z d) { return new Quadruple<W, X, Y, Z>(a, b, c, d); }
+		
+		@Override
+		public String toString() { return "[" + a + ", " + b + ", " + c + ", " + d + "]"; }
 	}
 }

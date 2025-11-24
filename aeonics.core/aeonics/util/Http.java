@@ -264,11 +264,11 @@ public class Http
 							{
 								// file upload
 								content.write("--a-e-o-n-i-c-s\r\nContent-Disposition: form-data; name=\"".getBytes(StandardCharsets.ISO_8859_1));
-								content.write(p.getKey().replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write(p.getKey().replaceAll("[\"\\r\\n\\x00]", "").getBytes(StandardCharsets.ISO_8859_1));
 								content.write("\"; filename=\"".getBytes(StandardCharsets.ISO_8859_1));
-								content.write(value.asString("name").replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write(value.asString("name").replaceAll("[\"\\r\\n\\x00]", "").getBytes(StandardCharsets.ISO_8859_1));
 								content.write("\"\r\nContent-Type: ".getBytes(StandardCharsets.ISO_8859_1));
-								content.write(value.asString("mime").replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write(value.asString("mime").replaceAll("[\"\\r\\n\\x00]", "").getBytes(StandardCharsets.ISO_8859_1));
 								content.write("\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
 								content.write(value.asString("content").getBytes(StandardCharsets.ISO_8859_1)); 
 								content.write("\r\n".getBytes(StandardCharsets.ISO_8859_1));
@@ -277,7 +277,7 @@ public class Http
 							{
 								// form data
 								content.write("--a-e-o-n-i-c-s\r\nContent-Disposition: form-data; name=\"".getBytes(StandardCharsets.ISO_8859_1));
-								content.write(p.getKey().replaceAll("[\"\\r\\n\\0]", "").getBytes(StandardCharsets.ISO_8859_1));
+								content.write(p.getKey().replaceAll("[\"\\r\\n\\x00]", "").getBytes(StandardCharsets.ISO_8859_1));
 								content.write("\"\r\n\r\n".getBytes(StandardCharsets.ISO_8859_1));
 								content.write(value.asString().getBytes(StandardCharsets.ISO_8859_1)); 
 								content.write("\r\n".getBytes(StandardCharsets.ISO_8859_1));

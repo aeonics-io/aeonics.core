@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.Principal;
 import java.security.PrivateKey;
@@ -69,8 +71,8 @@ public abstract class Network extends Manager.Type
 	public static class SecurityOptions
 	{
 		/**
-		 * Parses and returns a certificate from the given PEM-encoded certificate, or a valid 'storage://' URL
-		 * @param certificate the PEM-encoded certificate, or a valid 'storage://' URL
+		 * Parses and returns a certificate from the given PEM-encoded certificate, or a valid 'storage://' URL, or a valid local path
+		 * @param certificate the PEM-encoded certificate, or a valid 'storage://' URL, or a valid local path
 		 * @return the actual certificate (not the chain)
 		 * @throws Exception if the provided certificate cannot be converted to valid X509Certificate
 		 */
@@ -82,8 +84,8 @@ public abstract class Network extends Manager.Type
 		}
 		
 		/**
-		 * Parses and returns all certificates from the given PEM-encoded certificate, or a valid 'storage://' URL
-		 * @param certificates the PEM-encoded certificates, or a valid 'storage://' URL
+		 * Parses and returns all certificates from the given PEM-encoded certificate, or a valid 'storage://' URL, or a valid local path
+		 * @param certificates the PEM-encoded certificates, or a valid 'storage://' URL, or a valid local path
 		 * @return the actual certificate chain
 		 * @throws Exception if the provided certificates cannot be converted to valid X509Certificate
 		 */
@@ -94,8 +96,12 @@ public abstract class Network extends Manager.Type
 			InputStream certData = null;
 			if( certificates.startsWith("storage://") )
 				certData = URI.create(certificates).toURL().openConnection().getInputStream();
-			else
+			else if( certificates.startsWith("-----BEGIN ") )
 				certData = new ByteArrayInputStream(certificates.getBytes(StandardCharsets.ISO_8859_1));
+			else if( Files.isRegularFile(Paths.get(certificates)) )
+				certData = new ByteArrayInputStream(Files.readAllBytes(Paths.get(certificates)));
+			else
+				throw new IllegalArgumentException("Invalid certificate");
 			
 			CertificateFactory factory = CertificateFactory.getInstance("X.509");
 			Object[] os = factory.generateCertificates(certData).toArray();
@@ -108,11 +114,11 @@ public abstract class Network extends Manager.Type
 		}
 		
 		/**
-		 * Parses and returns a private key from the given PEM-encoded key, or a valid 'storage://' URL.
+		 * Parses and returns a private key from the given PEM-encoded key, or a valid 'storage://' URL, or a valid local path.
 		 * <p><b>Caution, the key should be in PKCS#8 format.</b> If the key starts with <code>-----BEGIN PRIVATE KEY-----</code>
 		 * you are probably good. If it starts with <code>-----BEGIN RSA PRIVATE KEY-----</code> then it will most probably fail.</p>
 		 * @param cert the matching certificate (see {@link #certificate(String)})
-		 * @param key the PEM-encoded private key, or a valid 'storage://' URL
+		 * @param key the PEM-encoded private key, or a valid 'storage://' URL, or a valid local path
 		 * @return the private key
 		 * @throws Exception if the provided private key cannot be converted to valid PrivateKey
 		 */
@@ -121,8 +127,12 @@ public abstract class Network extends Manager.Type
 			String keyData = null;
 			if( key.startsWith("storage://") )
 				keyData = new String(URI.create(key).toURL().openConnection().getInputStream().readAllBytes(), StandardCharsets.ISO_8859_1);
-			else
+			else if( key.startsWith("-----BEGIN ") )
 				keyData = key;
+			else if( Files.isRegularFile(Paths.get(key)) )
+				keyData = new String(Files.readAllBytes(Paths.get(key)), StandardCharsets.ISO_8859_1);
+			else
+				throw new IllegalArgumentException("Invalid key");
 			
 			keyData = keyData.replaceAll("\\s", "").replaceFirst(".*?-+[A-Z ]+-+", "").replaceFirst("-+[A-Z ]+-+.*$", "");
 			byte[] pk = Base64.getDecoder().decode(keyData);
@@ -135,8 +145,8 @@ public abstract class Network extends Manager.Type
 		
 		/**
 		 * Forces the client connection to authenticate with the provided certificate against the server.
-		 * @param certificate the PEM-encoded client certificate, or a valid 'storage://' URL
-		 * @param key the matching PEM-encoded private key, or a valid 'storage://' URL
+		 * @param certificate the PEM-encoded client certificate, or a valid 'storage://' URL, or a valid local path
+		 * @param key the matching PEM-encoded private key, or a valid 'storage://' URL, or a valid local path
 		 * @return this
 		 * @throws Exception if the provided arguments cannot be converted to valid X509Certificate and PrivateKey
 		 */
@@ -203,9 +213,9 @@ public abstract class Network extends Manager.Type
 		
 		/**
 		 * Exposes the server connection with the provided PEM-encoded certificate to all clients.
-		 * @param certificate the PEM-encoded server certificate, or a valid 'storage://' URL
-		 * @param key the matching PEM-encoded private key, or a valid 'storage://' URL
-		 * @param chain the PEM-encoded server certificate, or a valid 'storage://' URL. If null, or if the chain does not start with the original certificate, it will be prepended to the chain. 
+		 * @param certificate the PEM-encoded server certificate, or a valid 'storage://' URL, or a valid local path
+		 * @param key the matching PEM-encoded private key, or a valid 'storage://' URL, or a valid local path
+		 * @param chain the PEM-encoded server certificate, or a valid 'storage://' URL, or a valid local path. If null, or if the chain does not start with the original certificate, it will be prepended to the chain. 
 		 * @return this
 		 * @throws Exception if the provided arguments cannot be converted to valid X509Certificate and PrivateKey
 		 */
@@ -220,8 +230,12 @@ public abstract class Network extends Manager.Type
 			InputStream certData = null;
 			if( certificate.startsWith("storage://") )
 				certData = URI.create(certificate).toURL().openConnection().getInputStream();
-			else
+			else if( certificate.startsWith("-----BEGIN ") )
 				certData = new ByteArrayInputStream(certificate.getBytes(StandardCharsets.ISO_8859_1));
+			else if( Files.isRegularFile(Paths.get(certificate)) )
+				certData = new ByteArrayInputStream(Files.readAllBytes(Paths.get(certificate)));
+			else
+				throw new IllegalArgumentException("Invalid certificate");
 			
 			CertificateFactory factory = CertificateFactory.getInstance("X.509");
 			Object[] os = factory.generateCertificates(certData).toArray();
@@ -242,8 +256,12 @@ public abstract class Network extends Manager.Type
 				InputStream chainData = null;
 				if( chain.startsWith("storage://") )
 					chainData = URI.create(chain).toURL().openConnection().getInputStream();
-				else
+				else if( chain.startsWith("-----BEGIN ") )
 					chainData = new ByteArrayInputStream(chain.getBytes(StandardCharsets.ISO_8859_1));
+				else if( Files.isRegularFile(Paths.get(chain)) )
+					chainData = new ByteArrayInputStream(Files.readAllBytes(Paths.get(chain)));
+				else
+					throw new IllegalArgumentException("Invalid certificate");
 				
 				os = factory.generateCertificates(chainData).toArray();
 				
