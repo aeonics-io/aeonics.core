@@ -339,6 +339,7 @@ public class Database extends Item<Database.Type>
 				{
 					this.pool.deadConnection(this);
 				}
+				Manager.of(Logger.class).finer(Database.class, sql);
 				Manager.of(Logger.class).finer(Database.class, e);
 				throw e;
 			}

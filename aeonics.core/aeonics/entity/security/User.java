@@ -44,9 +44,9 @@ import aeonics.util.Tuples.Tuple;
 public class User extends Item<User.Type>
 {
 	public static final User.Type ANONYMOUS = new User().template().create(Data.map().put("id", "10000000-1100000000000000"))
-		.name("ANONYMOUS").internal(true).snapshotMode(SnapshotMode.UPDATE);
+		.name("ANONYMOUS").parameter("login", "ANONYMOUS").internal(true).snapshotMode(SnapshotMode.UPDATE);
 	public static final User.Type SYSTEM = new User().template().create(Data.map().put("id", "10000000-1200000000000000"))
-		.name("SYSTEM").internal(true).snapshotMode(SnapshotMode.UPDATE);
+		.name("SYSTEM").parameter("login", "SYSTEM").internal(true).snapshotMode(SnapshotMode.UPDATE);
 	
 	/**
 	 * Superclass for all user entities.

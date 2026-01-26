@@ -1,5 +1,7 @@
 package aeonics.manager;
 
+import java.util.Objects;
+
 import aeonics.data.Data;
 import aeonics.entity.Entity;
 import aeonics.util.StringUtils;
@@ -134,19 +136,9 @@ public abstract class Monitor extends Manager.Type
 	 * @param value the accumulated value
 	 */
 	public <T extends Entity> void count(T entity, Class<? super T> groupBy, long value) { add(entity.category(), StringUtils.toLowerCase(groupBy), entity.id(), "hit", value); }
-	
+
 	/**
-	 * Increments the counter of the provied entity by 1 and the accumulated value by the specified amount.
-	 * <ol>
-	 * <li>Level 1: entity category</li>
-	 * <li>Level 2: the group by type</li>
-	 * <li>Level 3: entity id</li>
-	 * <li>Level 4: the specified metric</li>
-	 * </ol>
-	 * <ul>
-	 * <li>Counter value: +1</li>
-	 * <li>Accumulated value: the provided value</li>
-	 * </ul>
+	 * Increments the specfied counter by 1 and the accumulated value by the specified amount.
 	 * @see #add(String, String, String, String, long)
 	 * @param <T> the entity class type
 	 * @param entity the target entity
@@ -264,6 +256,28 @@ public abstract class Monitor extends Manager.Type
 	}
 	
 	/**
+	 * Increments the specified counter by 1 and the accumulated value by the number of elapsed milliseconds.
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ms = Monitor.ns(...) ) { ... }</code></p>
+	 * @param l1 the level 1 name (i.e. category)
+	 * @param l2 the level 2 name (i.e. type)
+	 * @param l3 the level 3 name (i.e. identifier)
+	 * @param l4 the level 4 name (i.e. metric)
+	 * @return an auto closeable object to be used in a <code>try...with</code> statement
+	 */
+	public <T extends Entity> MonitorTimer ms(String l1, String l2, String l3, String l4)
+	{
+		final long start = System.currentTimeMillis();
+		return new MonitorTimer(() -> {
+				add(
+					Objects.requireNonNullElse(l1, UNSPECIFIED), 
+					Objects.requireNonNullElse(l2, UNSPECIFIED), 
+					Objects.requireNonNullElse(l3, UNSPECIFIED), 
+					Objects.requireNonNullElse(l4, UNSPECIFIED), 
+					System.currentTimeMillis()-start);
+		});
+	}
+	
+	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
 	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
 	 * <ol>
@@ -367,6 +381,28 @@ public abstract class Monitor extends Manager.Type
 		final long start = System.nanoTime();
 		return new MonitorTimer(() -> {
 				add(entity.category(), groupBy, entity.id(), metric, System.nanoTime()-start);
+		});
+	}
+	
+	/**
+	 * Increments the specified counter by 1 and the accumulated value by the number of elapsed nanoseconds.
+	 * <p>This method should be used in a <code>try...with</code> statement: <code>try( MonitorTimer ns = Monitor.ns(...) ) { ... }</code></p>
+	 * @param l1 the level 1 name (i.e. category)
+	 * @param l2 the level 2 name (i.e. type)
+	 * @param l3 the level 3 name (i.e. identifier)
+	 * @param l4 the level 4 name (i.e. metric)
+	 * @return an auto closeable object to be used in a <code>try...with</code> statement
+	 */
+	public <T extends Entity> MonitorTimer ns(String l1, String l2, String l3, String l4)
+	{
+		final long start = System.nanoTime();
+		return new MonitorTimer(() -> {
+				add(
+					Objects.requireNonNullElse(l1, UNSPECIFIED), 
+					Objects.requireNonNullElse(l2, UNSPECIFIED), 
+					Objects.requireNonNullElse(l3, UNSPECIFIED), 
+					Objects.requireNonNullElse(l4, UNSPECIFIED), 
+					System.nanoTime()-start);
 		});
 	}
 	

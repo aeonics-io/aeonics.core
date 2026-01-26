@@ -364,4 +364,21 @@ public abstract class Security extends Manager.Type
 	 * @param user the target user, must not be null and must not be {@link User#SYSTEM} or {@link User#ANONYMOUS}
 	 */
 	public abstract Collection<Token> listTokens(User.Type user);
+	
+	/**
+	 * Attempts to populate the user from its user id from any {@link Provider}.
+	 * This is used by the {@link Token} when the user is not already present in the Registry.
+	 * After this method returns, it is expected that the user be fully populated and available in the Registry until an eventual cleanup timeout.
+	 * @param user_id the user id
+	 * @return the populated user, or null if the user could not be populated.
+	 */
+	public User.Type populate(String user_id)
+	{
+		for( Provider.Type p : Registry.of(Provider.class) )
+		{
+			User.Type u = p.populate(user_id);
+			if( u != null ) return u;
+		}
+		return null;
+	}
 }

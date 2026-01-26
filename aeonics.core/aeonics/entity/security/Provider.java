@@ -97,6 +97,16 @@ public abstract class Provider extends Item<Provider.Type>
 		public abstract User.Type authenticate(Data context);
 		
 		/**
+		 * Attempts to populate the user from its user id.
+		 * This is used by the {@link Token} when the user is not already present in the Registry.
+		 * After this method returns, it is expected that the user be fully populated and available in the Registry until an eventual cleanup timeout.
+		 * This method should typically be implemented by providers with an external (i.e. database) source of users.
+		 * @param user_id the user id
+		 * @return the populated user, or null if the user could not be populated.
+		 */
+		public abstract User.Type populate(String user_id);
+		
+		/**
 		 * Enable this provider for the specified existing user.
 		 * The user may be null in which case a new user should be created.
 		 * It is a good idea to synchronize this method to avoid side effects.
@@ -217,6 +227,8 @@ public abstract class Provider extends Item<Provider.Type>
 				if( hash.equals(priv.asString("password")) ) return user;
 				else return null;
 			}
+			
+			public User.Type populate(String user_id) { return null; }
 			
 			public synchronized User.Type join(Data context, User.Type existing)
 			{

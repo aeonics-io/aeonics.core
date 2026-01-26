@@ -10,7 +10,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import aeonics.util.Functions.BiConsumer;
+import aeonics.util.Functions.Consumer;
 import aeonics.util.Functions.Supplier;
+import aeonics.util.Functions.Runnable;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 
@@ -102,7 +104,17 @@ public class Callback<V, T> implements Iterable<BiConsumer<V, T>>
 	 * @param handler the handler that should only run once
 	 * @return a handler that will only run once
 	 */
-	public static <U, S> Once<U, S> once(aeonics.util.Functions.Runnable handler) { Objects.requireNonNull(handler); return new Once<U, S>((value, target) -> { handler.run(); }); }
+	public static <U, S> Once<U, S> once(Consumer<U> handler) { Objects.requireNonNull(handler); return new Once<U, S>((value, target) -> { handler.accept(value); }); }
+	
+	
+	/**
+	 * Returns a handler that will only run once.
+	 * @param <U> the type of data that triggered this callback
+	 * @param <S> the type of the target class of this callback
+	 * @param handler the handler that should only run once
+	 * @return a handler that will only run once
+	 */
+	public static <U, S> Once<U, S> once(Runnable handler) { Objects.requireNonNull(handler); return new Once<U, S>((value, target) -> { handler.run(); }); }
 	
 	/**
 	 * The current handler
@@ -117,6 +129,26 @@ public class Callback<V, T> implements Iterable<BiConsumer<V, T>>
 	public void then(BiConsumer<V, T> handler)
 	{
 		this.handlers.offer(handler);
+	}
+	
+	/**
+	 * Adds a handler for this callback.
+	 * <p>Consider {@link Once} if the handler should only run once.</p>
+	 * @param handler the handler
+	 */
+	public void then(Consumer<V> handler)
+	{
+		this.handlers.offer((v, t) -> handler.accept(v));
+	}
+	
+	/**
+	 * Adds a handler for this callback.
+	 * <p>Consider {@link Once} if the handler should only run once.</p>
+	 * @param handler the handler
+	 */
+	public void then(Runnable handler)
+	{
+		this.handlers.offer((v, t) -> handler.run());
 	}
 	
 	/**

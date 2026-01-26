@@ -10,6 +10,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import aeonics.data.Data;
 import aeonics.entity.Entity;
+import aeonics.entity.Registry;
 import aeonics.manager.Config;
 import aeonics.manager.Logger;
 import aeonics.manager.Manager;
@@ -36,6 +37,21 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 	// =========================================
 	
 	/**
+	 * Perform the MFA check against any provider.
+	 * @param user the target user
+	 * @param context any implementation specific data
+	 * @return true if the multifactor authentication check succeeds, false otherwise
+	 */
+	public static boolean check(User.Type user, Data context)
+	{
+		for( Multifactor.Type m : Registry.of(Multifactor.class) )
+			if( m.check(user, context) )
+				return true;
+		return false;
+	}
+	
+	
+	/**
 	 * This base entity defines the minimum requirements for MFA providers.
 	 */
 	public abstract static class Type extends Entity
@@ -54,7 +70,7 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 		public abstract void enroll(User.Type user, Data context);
 		
 		/**
-		 * Checks if the specified user is enrolled with this MultifactorAuthentication provider.
+		 * Checks if the specified user is enrolled with this Multifactor provider.
 		 * @param user the user
 		 * @return true if the user is enrolled
 		 */

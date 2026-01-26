@@ -1,8 +1,11 @@
 package aeonics.util;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.WeakHashMap;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import aeonics.data.Data;
 
@@ -989,12 +992,36 @@ public class StringUtils
 	}
 	
 	/**
+	 * Returns the binary representation of the hex string data.
+	 * If the number of hex digits is not even, a leading zero is assumed.
+	 * @param hex data in hex format
+	 * @return the decoded data
+	 */
+	public static byte[] fromHex(String data)
+	{
+		if( data == null || data.isBlank() ) return new byte[0];
+		byte[] result = new byte[data.length() % 2 == 0 ? data.length()/2 : data.length()/2+1];
+		
+		int offset = 0;
+		if( data.length() % 2 == 1 )
+		{
+			result[0] = (byte) Integer.parseInt(data.substring(0, 1), 16);
+			offset = 1;
+		}
+		
+		for( int i = 0; i + offset < data.length(); i += 2 )
+			result[i / 2 + offset] = (byte) Integer.parseInt(data.substring(i + offset, i + offset + 2), 16);
+		
+		return result;
+	}
+	
+	/**
 	 * Performs a substring with positive or negatives indices.
 	 * @param text the input text. If null, an empty string is returned.
-	 * @param start the start index. If positive, it starts from the beginning, if negative, it starts from the end. 
+	 * @param start the start index. If positive or zero, it starts from the beginning, if negative, it starts from the end. 
 	 * 		If the index is positive and larger than the size of the text, an empty result is returned. 
 	 * 		If the index is negative and larger than the size of the text, it starts at the beginning if the text.
-	 * @param end the end index. If positive, it counts form the beginning, if negative, it counts from the end.
+	 * @param end the end index. If positive, it counts form the beginning, if zero or negative, it counts from the end.
 	 * 		If the index is positive and larger than the size of the text, it ends at the end of the text.
 	 * 		If the index is negative and larger than the size of the text, an empty result is returned.
 	 * 		If the index (in absolute position) is before the start, an empty result is returned.
@@ -1010,11 +1037,58 @@ public class StringUtils
 		if (start < 0) start = 0;
 		if (start >= len) return "";
 		
-		if (end < 0) end = len + end;
+		if (end <= 0) end = len + end;
 		if (end < 0) return "";
 		if (end > len) end = len;
 		
 		if (end <= start) return "";
 		return text.substring(start, end);
+	}
+	
+	/**
+	 * Compresses some text using zip deflate
+	 * @param text the input text
+	 * @return the compressed text
+	 * @throws Exception if anything wrong happens
+	 */
+	public static byte[] compress(String text) throws Exception
+	{
+		Deflater deflater = new Deflater();
+		deflater.setInput(text.getBytes("UTF-8"));
+		deflater.finish();
+		
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		byte[] tmp = new byte[1024];
+		while( !deflater.finished() )
+		{
+		    int n = deflater.deflate(tmp);
+		    out.write(tmp, 0, n);
+		}
+		deflater.end();
+		
+		return out.toByteArray();
+	}
+	
+	/**
+	 * Deompresses some text using zip inflate
+	 * @param zip the input compressed data
+	 * @return the decompressed text
+	 * @throws Exception if anything wrong happens
+	 */
+	public static String decompress(byte[] zip) throws Exception
+	{
+		Inflater inflater = new Inflater();
+		inflater.setInput(zip);
+		
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		byte[] tmp = new byte[1024];
+		while( !inflater.finished() )
+		{
+		    int n = inflater.inflate(tmp);
+		    out.write(tmp, 0, n);
+		}
+		inflater.end();
+		
+		return out.toString("UTF-8");
 	}
 }

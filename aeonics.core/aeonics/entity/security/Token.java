@@ -129,7 +129,12 @@ public class Token implements Exportable
 	 * Returns the {@link User} linked to this token.
 	 * @return the {@link Provider} linked to this token, it may be null if the user does not exist in the registry
 	 */
-	public User.Type user() { return Registry.of(User.class).get(user); }
+	public User.Type user()
+	{
+		User.Type u = Registry.of(User.class).get(user);
+		if( u != null ) return u;
+		else return Manager.of(Security.class).populate(user);
+	}
 	
 	/**
 	 * Returns true if the {@link User} linked to this token matches the provided identifier.
