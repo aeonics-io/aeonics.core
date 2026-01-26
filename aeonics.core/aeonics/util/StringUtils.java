@@ -8,6 +8,7 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import aeonics.data.Data;
+import aeonics.util.Functions.Function;
 
 /**
  * Simple fast alternatives to regular String operations
@@ -84,6 +85,19 @@ public class StringUtils
 	 */
 	public static String substitute(String text, Data values)
 	{
+		return substitute(text, values, (s) -> s);
+	}
+	
+	/**
+	 * Performs a substitution of all <code>{{name}}</code> tokens in the original text with the provided values.
+	 * If some tokens do not have a matching value, they are replaced by an empty string.
+	 * @param text the original text
+	 * @param values the values to substitute
+	 * @param normalizer the text escaping or normalizing function
+	 * @return the substituted text
+	 */
+	public static String substitute(String text, Data values, Function<String, String> normalizer)
+	{
 		if( text == null || text.isEmpty() ) return "";
 		if( values == null || !values.isMap() ) values = Data.map();
 		
@@ -99,7 +113,11 @@ public class StringUtils
 			if( i < 0 ) break;
 			
 			String name = text.substring(mark, i);
-			if( values.containsKey(name) ) b.append(values.asString(name));
+			if( values.containsKey(name) )
+			{
+				try { b.append(normalizer.apply(values.asString(name))); }
+				catch(Exception e) { /* treat as blank */ }
+			}
 			
 			mark = i+2;
 		}

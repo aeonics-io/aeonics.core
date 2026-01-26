@@ -219,8 +219,9 @@ public abstract class Provider extends Item<Provider.Type>
 				User.Type user = Registry.of(User.class).get((u) -> context.asString("username").equals(u.login()));
 
 				if( user == null ) return null;
+System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX " + user.export());
 				Data priv = privateData(user);
-
+System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXX " + priv);
 				if( priv.isEmpty() ) return null;
 				
 				String hash = Manager.of(Security.class).hash(context.asString("password"), priv.asString("salt"));
