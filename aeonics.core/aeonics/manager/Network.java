@@ -626,7 +626,7 @@ public abstract class Network extends Manager.Type
 						params.setProtocols(supported.toArray(new String[supported.size()]));
 				}
 				
-				List<String> ciphers = options.protocols();
+				List<String> ciphers = options.ciphers();
 				if( ciphers == null || ciphers.isEmpty() )
 				{
 					if( Manager.of(Config.class).contains(Network.class, "tls.default.ciphers") )
