@@ -43,6 +43,36 @@ public abstract class Timeout extends Manager.Type
 		protected Tracker(T target) { this.target = new WeakReference<T>(target); }
 		
 		/**
+		 * Creates a target instance with the specified element.
+		 * The target element may be null in which case it is the responsibility of the caller to perform the specified logic upon {@link #onExpire()}.
+		 * @param name the tracker name
+		 * @param target the target element
+		 */
+		protected Tracker(String name, T target) { this.name = name; this.target = new WeakReference<T>(target); }
+		
+		/**
+		 * Creates a target instance with a null element.
+		 * Since the element is null, it is the responsibility of the caller to perform the specified logic upon {@link #onExpire()}.
+		 * @param name the tracker name
+		 */
+		protected Tracker(String name) { this.name = name; this.target = null; }
+		
+		private String name = null;
+		
+		/**
+		 * Returns the tracker name
+		 * @return the tracker name, defaults to null
+		 */
+		public String name() { return name; }
+		
+		/**
+		 * Sets the tracker name
+		 * @param value the name
+		 * @return this for chaining
+		 */
+		public Tracker<T> name(String value) { this.name = value; return this; }
+		
+		/**
 		 * Target element
 		 */
 		private WeakReference<T> target;
@@ -50,7 +80,7 @@ public abstract class Timeout extends Manager.Type
 		 * Returns the target element or null if it was garbage collected meanwhile
 		 * @return the target element
 		 */
-		public T target() { return target.get(); }
+		public T target() { return target == null ? null : target.get(); }
 		
 		/**
 		 * Returns the delay in milliseconds after which this element expires.

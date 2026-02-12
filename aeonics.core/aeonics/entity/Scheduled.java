@@ -9,6 +9,7 @@ import aeonics.manager.Logger;
 import aeonics.manager.Manager;
 import aeonics.manager.Scheduler;
 import aeonics.manager.Scheduler.Cron;
+import aeonics.manager.Scheduler.Task;
 import aeonics.template.Parameter;
 import aeonics.util.Functions.Consumer;
 
@@ -35,6 +36,14 @@ public class Scheduled extends Origin
 			super.produce(message, output);
 		}
 		
+		@Override
+		public <T extends Entity> T name(String value)
+		{
+			if( cron != null && cron.task() instanceof Task )
+				((Task)cron.task()).name(value);
+			return super.name(value);
+		}
+		
 		private void runTask(ZonedDateTime value)
 		{
 			if( task != null )
@@ -58,6 +67,9 @@ public class Scheduled extends Origin
 		public Type task(Consumer<ZonedDateTime> value)
 		{
 			this.task = value;
+			if( cron != null && value instanceof Task && cron.task() instanceof Task )
+				((Task)cron.task()).name(((Task)value).name());
+				
 			return this;
 		}
 		
@@ -103,7 +115,7 @@ public class Scheduled extends Origin
 				((Scheduled.Type)instance).cron = new Cron() { }
 					.template()
 					.create()
-					.task((time) -> { ((Scheduled.Type)instance).runTask(time); })
+					.task(Task.of(instance.name(), (time) -> { ((Scheduled.Type)instance).runTask(time); }))
 					.start(ZonedDateTime.now().withNano(0))
 					.rule(data.asString("rule"));
 					

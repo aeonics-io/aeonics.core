@@ -31,6 +31,32 @@ import aeonics.util.StringUtils;
 public abstract class Scheduler extends Manager.Type
 {
 	/**
+	 * A named scheduled task
+	 */
+	public static class Task implements Consumer<ZonedDateTime>
+	{
+		private Consumer<ZonedDateTime> c = null;
+		private Runnable r = null;
+		
+		private String name = "";
+		public String name() { return name; }
+		public Task name(String value) { this.name = value; return this; }
+		
+		private Task() { }
+		
+		public void accept(ZonedDateTime time)
+		{
+			if( c != null ) c.accept(time);
+			else if( r != null ) r.run();
+		}
+		
+		public static Task of(String name, Runnable task) { Task t = new Task(); t.name(name); t.r = task; return t; }
+		public static Task of(String name, Consumer<ZonedDateTime> task) { Task t = new Task(); t.name(name); t.c = task; return t; }
+		public static Task of(Runnable task) { Task t = new Task(); t.name(""); t.r = task; return t; }
+		public static Task of(Consumer<ZonedDateTime> task) { Task t = new Task(); t.name(""); t.c = task; return t; }
+	}
+	
+	/**
 	 * Hardcoded manager type
 	 */
 	public final Class<? extends Manager.Type> manager() { return Scheduler.class; }
@@ -54,6 +80,18 @@ public abstract class Scheduler extends Manager.Type
 			 */
 			@Override
 			public boolean internal() { return true; }
+			
+			/**
+			 * Grab the task name (user defined) instead of the Cron object name, if applicable
+			 */
+			@Override
+			public String name()
+			{
+				if( this.task instanceof Task )
+					return ((Task)this.task).name();
+				else
+					return super.name();
+			}
 			
 			/**
 			 * Cron tasks are not included in snapshots by default
@@ -84,7 +122,11 @@ public abstract class Scheduler extends Manager.Type
 			 * @param task the task to execute
 			 * @return this for chaining
 			 */
-			public <R extends Type> R task(Consumer<ZonedDateTime> task) { this.task = task; return (R)this; }
+			public <R extends Type> R task(Consumer<ZonedDateTime> task)
+			{
+				this.task = task;
+				return (R)this;
+			}
 			
 			/**
 			 * Start time for this scheduled task
