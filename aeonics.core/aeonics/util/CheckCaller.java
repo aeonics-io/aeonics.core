@@ -92,8 +92,8 @@ public class CheckCaller
 	 * @param clazz the class to check
 	 * @param method the method to check (may be null)
 	 */
-	public static void prevent(Class<?> clazz, String method) { require(clazz, method, Integer.MAX_VALUE, false); }
-	
+	public static void prevent(Class<?> clazz, String method) { prevent(clazz, method, Integer.MAX_VALUE, false); }
+
 	/**
 	 * Calls {@link #prevent(Class, String, int, boolean)} with an unlimited depth.
 	 * @see #prevent(Class, String, int, boolean)
@@ -101,8 +101,8 @@ public class CheckCaller
 	 * @param method the method to check (may be null)
 	 * @param strict whether or not to check in strict mode
 	 */
-	public static void prevent(Class<?> clazz, String method, boolean strict) { require(clazz, method, Integer.MAX_VALUE, strict); }
-	
+	public static void prevent(Class<?> clazz, String method, boolean strict) { prevent(clazz, method, Integer.MAX_VALUE, strict); }
+
 	/**
 	 * Calls {@link #prevent(Class, String, int, boolean)} in non strict mode.
 	 * @see #prevent(Class, String, int, boolean)
@@ -110,7 +110,7 @@ public class CheckCaller
 	 * @param method the method to check (may be null)
 	 * @param maxDepth the maximum intermediate method calls
 	 */
-	public static void prevent(Class<?> clazz, String method, int maxDepth) { require(clazz, method, maxDepth, false); }
+	public static void prevent(Class<?> clazz, String method, int maxDepth) { prevent(clazz, method, maxDepth, false); }
 	
 	/**
 	 * Checks that the current method has <b>NOT</b> been called as a result of the specified class and method.

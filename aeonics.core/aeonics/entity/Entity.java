@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -750,7 +750,7 @@ public class Entity implements Exportable, Snapshotable
 	/**
 	 * Source of entropy
 	 */
-	private static final Random random = new Random();
+	private static final SecureRandom random = new SecureRandom();
 	
 	/**
 	 * Random id generator for entities

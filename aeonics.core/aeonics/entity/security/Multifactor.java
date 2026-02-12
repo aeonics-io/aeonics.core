@@ -455,10 +455,10 @@ public abstract class Multifactor extends Item<Multifactor.Type>
 			{
 				if( seed == null || seed.length < 20 ) throw new SecurityException("Invalid or weak seed");
 				
-				byte[] secret = new byte[6];
-				
-				for( int i = 0; i < 6; i++ ) secret[i] = seed[i];
-				for( int i = 6; i < seed.length; i++ ) secret[i%6] ^= seed[i];
+				byte[] secret = new byte[20];
+
+				for( int i = 0; i < 20; i++ ) secret[i] = seed[i];
+				for( int i = 20; i < seed.length; i++ ) secret[i%20] ^= seed[i];
 				
 				return secret;
 			}

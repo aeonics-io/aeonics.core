@@ -2,6 +2,8 @@ package aeonics.manager;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
@@ -43,13 +45,37 @@ public abstract class Security extends Manager.Type
 	public abstract String randomHash();
 	
 	/**
-	 * Produces a strong cryptographic hash of the target input data.
-	 * The hash is not salted.
-	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * Produces a SHA-256 digest of the target input data.
+	 * <p>This is <b>not</b> intended for password hashing. Use {@link #hash(String, String)} for passwords.</p>
+	 * <p>This is typically used for file integrity comparison (checksums).</p>
 	 * @param value the input stream to hash
-	 * @return the hashed value in hex format
+	 * @return the hash value in hex format
 	 */
-	public abstract String hash(InputStream value);
+	public String hash(InputStream value)
+	{
+		try
+		{
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			try( DigestInputStream dis = new DigestInputStream(value, md) )
+			{
+				byte[] buffer = new byte[8192];
+				while( dis.read(buffer) != -1 );
+			}
+			byte[] hash = md.digest();
+			char[] hex = new char[hash.length * 2];
+			for( int i = 0; i < hash.length; i++ )
+			{
+				int h = hash[i] & 0xff;
+				hex[i * 2] = "0123456789abcdef".charAt(h >>> 4);
+				hex[i * 2 + 1] = "0123456789abcdef".charAt(h & 0x0F);
+			}
+			return new String(hex);
+		}
+		catch( Exception e )
+		{
+			throw new RuntimeException("Hash failed");
+		}
+	}
 	
 	/**
 	 * Produces a strong cryptographic hash of the input value.
@@ -76,16 +102,37 @@ public abstract class Security extends Manager.Type
 	 * @param salt the salt value (may be null but it is not recommended)
 	 * @return the hashed value in hex format
 	 */
-	public String hash(String value, String salt) { return hash(value == null ? null : value.getBytes(StandardCharsets.ISO_8859_1), salt == null ? null : salt.getBytes(StandardCharsets.ISO_8859_1)); }
-	
+	public String hash(String value, String salt) { return hash(value == null ? null : value.getBytes(StandardCharsets.ISO_8859_1), salt == null ? null : salt.getBytes(StandardCharsets.ISO_8859_1), null); }
+
+	/**
+	 * Produces a strong cryptographic hash of the input value with an explicit pepper.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the input text to hash
+	 * @param salt the salt value (may be null but it is not recommended)
+	 * @param pepper the pepper value. If null, the implementation's default pepper is used (if configured).
+	 * @return the hashed value in hex format
+	 */
+	public String hash(String value, String salt, String pepper) { return hash(value == null ? null : value.getBytes(StandardCharsets.ISO_8859_1), salt == null ? null : salt.getBytes(StandardCharsets.ISO_8859_1), pepper == null ? null : pepper.getBytes(StandardCharsets.ISO_8859_1)); }
+
 	/**
 	 * Produces a strong cryptographic hash of the input value.
+	 * Uses the implementation's default pepper if configured.
 	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
 	 * @param value the input text to hash
 	 * @param salt the salt value (may be null but it is not recommended)
 	 * @return the hashed value in hex format
 	 */
-	public abstract String hash(byte[] value, byte[] salt);
+	public String hash(byte[] value, byte[] salt) { return hash(value, salt, null); }
+
+	/**
+	 * Produces a strong cryptographic hash of the input value with an explicit pepper.
+	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * @param value the input text to hash
+	 * @param salt the salt value (may be null but it is not recommended)
+	 * @param pepper the pepper value. If null, the implementation's default pepper is used (if configured).
+	 * @return the hashed value in hex format
+	 */
+	public abstract String hash(byte[] value, byte[] salt, byte[] pepper);
 	
 	/**
 	 * Encrypts the given value with a strong symmetric key encryption method.
@@ -240,7 +287,30 @@ public abstract class Security extends Manager.Type
 		}
 		return User.ANONYMOUS;
 	}
-	
+
+	/**
+	 * Checks whether the given user is currently locked from authentication.
+	 * A user may be locked for various reasons, including excessive failed authentication attempts or other security policies.
+	 * @param userId the user id to check
+	 * @return true if the user is currently locked and authentication should be rejected
+	 */
+	public abstract boolean isLocked(String userId);
+
+	/**
+	 * Records a failed authentication attempt for the given user.
+	 * This applies to all authentication mechanisms including passwords, OTP, and other verification methods.
+	 * The implementation may apply rate limiting or other security measures based on accumulated failures.
+	 * @param userId the user id that failed authentication
+	 */
+	public abstract void recordFailedAuthentication(String userId);
+
+	/**
+	 * Records a successful authentication for the given user.
+	 * This applies to all authentication mechanisms and may reset any accumulated failed attempts or other security tracking.
+	 * @param userId the user id that successfully authenticated
+	 */
+	public abstract void recordSuccessfulAuthentication(String userId);
+
 	/**
 	 * Checks if the user is granted usage of the specified scope with the given context.
 	 * The final decision is <pre>!isExplicitlyDenied(user, scope, context) &amp;&amp; isExplicitlyAllowed(user, scope, context)</pre>
@@ -338,7 +408,13 @@ public abstract class Security extends Manager.Type
 	public abstract Token generateToken(User.Type user, long validity, boolean exclusive, String... scopes);
 	
 	/**
-	 * Retreives a token instance based on a an opaque token value.
+	 * Retrieves a token instance based on an opaque token value.
+	 * <p><b>Security note:</b> This method performs a direct lookup without rate limiting.
+	 * The security of this approach relies entirely on the token entropy: an attacker guessing random values
+	 * has a probability of k*N/S per attempt, where k is the number of attempts, N is the number of valid tokens,
+	 * and S is the token space size. Implementations must ensure that tokens are generated with sufficient size
+	 * and entropy to make brute-force search infeasible. For example, with SHA-256 based tokens (256-bit / 64 hex characters),
+	 * even 10^15 attempts against 10^5 valid tokens yields a probability of approximately 10^-57.</p>
 	 * @param token the token value, must not be null
 	 * @param reset whether or not to reset the optional time-based validity of this for this token
 	 * @return the matching token instance or null if no token matches
