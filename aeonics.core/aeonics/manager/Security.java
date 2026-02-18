@@ -78,22 +78,41 @@ public abstract class Security extends Manager.Type
 	}
 	
 	/**
-	 * Produces a strong cryptographic hash of the input value.
-	 * The hash is not salted. Always prefer the {@link #hash(String, String)} version.
-	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * Produces a SHA-256 digest of the target input value.
+	 * <p>This is <b>not</b> intended for password hashing. Use {@link #hash(String, String)} for passwords.</p>
+	 * <p>This is typically used for lightweight key obfuscation and spread.</p>
 	 * @param value the input text to hash
 	 * @return the hashed value in hex format
 	 */
-	public String hash(String value) { return hash(value == null ? null : value.getBytes(StandardCharsets.ISO_8859_1), null); }
+	public String hash(String value) { return hash(value == null ? null : value.getBytes(StandardCharsets.ISO_8859_1)); }
 	
 	/**
-	 * Produces a strong cryptographic hash of the input value.
-	 * The hash is not salted. Always prefer the {@link #hash(String, String)} version.
-	 * The underlying implementation is not enforced but the algorithm shall remain consistent to ensure backward compatibility over time.
+	 * Produces a SHA-256 digest of the target input value.
+	 * <p>This is <b>not</b> intended for password hashing. Use {@link #hash(String, String)} for passwords.</p>
+	 * <p>This is typically used for lightweight key obfuscation and spread.</p>
 	 * @param value the input text to hash
 	 * @return the hashed value in hex format
 	 */
-	public String hash(byte[] value) { return hash(value, null); }
+	public String hash(byte[] value)
+	{
+		try
+		{
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			byte[] hash = md.digest(value);
+			char[] hex = new char[hash.length * 2];
+			for( int i = 0; i < hash.length; i++ )
+			{
+				int h = hash[i] & 0xff;
+				hex[i * 2] = "0123456789abcdef".charAt(h >>> 4);
+				hex[i * 2 + 1] = "0123456789abcdef".charAt(h & 0x0F);
+			}
+			return new String(hex);
+		}
+		catch( Exception e )
+		{
+			throw new RuntimeException("Hash failed");
+		}
+	}
 	
 	/**
 	 * Produces a strong cryptographic hash of the input value.
