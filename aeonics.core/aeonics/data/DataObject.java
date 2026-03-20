@@ -73,8 +73,6 @@ public class DataObject implements Data
 			try { return Long.parseLong(source.toString()); } catch(NumberFormatException n) { /* ignore */ }
 			try { return Double.parseDouble(source.toString()); } catch(NumberFormatException n) { /* ignore */ }
 			
-			if( !(source instanceof String) )
-				return source.hashCode(); // allow conversion to number to be defined by hashCode()
 			return 0;
 		}
 	}

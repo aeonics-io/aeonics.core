@@ -884,6 +884,14 @@ public abstract class Network extends Manager.Type
 		 * @return whether or not future accepted connections will be secure
 		 */
 		public boolean isSecure();
+		
+		/**
+		 * Returns the {@link SecurityOptions} associated with this server, or null if not secure. 
+		 * The returned object is live, modifications to it will affect
+		 * all future accepted connections without requiring a server restart.
+		 * @return the security options, or null for plain connections
+		 */
+		public default SecurityOptions security() { return null; }
 	}
 	
 	/**

@@ -93,6 +93,16 @@ public interface Data extends Iterable<Data>
 	 */
 	public static Data list(Object ...elements) { return new DataList(elements); }
 	
+	/**
+	 * Provides a fallback alternative in case this data {@link #isEmpty()}
+	 * @param fallback the fallback value
+	 * @return the current data object's value if it is not empty, or the fallback value
+	 */
+	default Data or(Object fallback)
+	{
+		return this.isEmpty() ? Data.of(fallback) : this;
+	}
+	
 	// ==========================
 	// ITERABLE METHODS
 	// ==========================

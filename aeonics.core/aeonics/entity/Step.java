@@ -930,6 +930,12 @@ public abstract class Step extends Item<Step.Type>
 			private Network.Server server = null;
 			
 			/**
+			 * Returns the connected network server object.
+			 * @return the connected network server object or null if not yet connected
+			 */
+			protected Network.Server server() { return server; }
+			
+			/**
 			 * The connection supplier
 			 */
 			private Supplier<Network.Server> connect = null;

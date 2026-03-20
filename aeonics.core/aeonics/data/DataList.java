@@ -1,7 +1,6 @@
 package aeonics.data;
 
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -20,7 +19,7 @@ import java.util.Enumeration;
 @Internal
 public class DataList implements Data
 {
-	private LinkedList<Data> source = new LinkedList<Data>();
+	private ArrayList<Data> source = new ArrayList<Data>();
 	
 	public DataList(Collection<?> list)
 	{

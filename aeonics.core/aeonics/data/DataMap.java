@@ -1,7 +1,7 @@
 package aeonics.data;
 
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -15,7 +15,7 @@ import aeonics.util.Json;
 @Internal
 public class DataMap implements Data
 {
-	private HashMap<String, Data> source = new HashMap<String, Data>();
+	private LinkedHashMap<String, Data> source = new LinkedHashMap<String, Data>();
 	
 	public DataMap(Map<?, ?> map)
 	{

@@ -226,7 +226,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> MonitorTimer ms(T entity, Class<? super T> groupBy, String metric) { return ms(entity, StringUtils.toLowerCase(groupBy), "ms"); }
+	public <T extends Entity> MonitorTimer ms(T entity, Class<? super T> groupBy, String metric) { return ms(entity, StringUtils.toLowerCase(groupBy), metric); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed milliseconds.
@@ -355,7 +355,7 @@ public abstract class Monitor extends Manager.Type
 	 * @param metric the target metric
 	 * @return an auto closeable object to be used in a <code>try...with</code> statement
 	 */
-	public <T extends Entity> MonitorTimer ns(T entity, Class<? super T> groupBy, String metric) { return ns(entity, StringUtils.toLowerCase(groupBy), "ns"); }
+	public <T extends Entity> MonitorTimer ns(T entity, Class<? super T> groupBy, String metric) { return ns(entity, StringUtils.toLowerCase(groupBy), metric); }
 	
 	/**
 	 * Increments the counter of the provied entity by 1 and the accumulated value by the number of elapsed nanoseconds.
