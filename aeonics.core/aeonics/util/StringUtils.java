@@ -8,6 +8,7 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import aeonics.data.Data;
+import aeonics.util.Functions.BiFunction;
 import aeonics.util.Functions.Function;
 
 /**
@@ -98,31 +99,45 @@ public class StringUtils
 	 */
 	public static String substitute(String text, Data values, Function<String, String> normalizer)
 	{
+		return substitute(text, values, (BiFunction<String, String, String>) (value, name) -> normalizer.apply(value));
+	}
+
+	/**
+	 * Performs a substitution of all <code>{{name}}</code> tokens in the original text with the provided values.
+	 * If some tokens do not have a matching value, they are replaced by an empty string.
+	 * The normalizer receives both the value and the token name, allowing different processing based on the token.
+	 * @param text the original text
+	 * @param values the values to substitute
+	 * @param normalizer the text escaping or normalizing function that receives (value, name)
+	 * @return the substituted text
+	 */
+	public static String substitute(String text, Data values, BiFunction<String, String, String> normalizer)
+	{
 		if( text == null || text.isEmpty() ) return "";
 		if( values == null || !values.isMap() ) values = Data.map();
-		
+
 		StringBuilder b = new StringBuilder(text.length());
-		
+
 		int i = 0, mark = 0;
 		while( (i = text.indexOf("{{", mark)) != -1 )
 		{
 			b.append(text, mark, i);
-			
+
 			mark = i+2;
 			i = text.indexOf("}}", i+2);
 			if( i < 0 ) break;
-			
+
 			String name = text.substring(mark, i);
 			if( values.containsKey(name) )
 			{
-				try { b.append(normalizer.apply(values.asString(name))); }
+				try { b.append(normalizer.apply(values.asString(name), name)); }
 				catch(Exception e) { /* treat as blank */ }
 			}
-			
+
 			mark = i+2;
 		}
 		b.append(text, mark, text.length());
-		
+
 		return b.toString();
 	}
 	
