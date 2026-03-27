@@ -396,7 +396,7 @@ public class Database extends Item<Database.Type>
 		/**
 		 * Returns the list of columns in the specified table.
 		 * 
-		 * <p>The returned data is a list of table descriptions that include:</p>
+		 * <p>The returned data is a list of column descriptions that include:</p>
 		 * <ul>
 		 * <li><b>name</b>: the column name</li>
 		 * <li><b>size</b>: the column data type size</li>
@@ -418,14 +418,31 @@ public class Database extends Item<Database.Type>
 		{
 			try
 			{
-				ResultSet r = connection.getMetaData().getPrimaryKeys(connection.getCatalog(), connection.getSchema(), table);
-				List<String> primary = new LinkedList<>();
-				while( r.next() )
-					primary.add(r.getString("COLUMN_NAME"));
+				ResultSet r = connection.getMetaData().getColumns(connection.getCatalog(), connection.getSchema(), table, null);
+				if( !r.next() )
+				{
+					// maybe the table name is not an exact match
+					Data tables = tables();
+					for( Data t : tables )
+					{
+						if( table.equalsIgnoreCase(t.asString("name")) )
+						{
+							table = t.asString("name");
+							break;
+						}
+					}
+					
+					r = connection.getMetaData().getColumns(connection.getCatalog(), connection.getSchema(), table, null);
+					if( !r.next() ) return Data.list();
+				}
 				
-				r = connection.getMetaData().getColumns(connection.getCatalog(), connection.getSchema(), table, null);
+				ResultSet rpk = connection.getMetaData().getPrimaryKeys(connection.getCatalog(), connection.getSchema(), table);
+				List<String> primary = new LinkedList<>();
+				while( rpk.next() )
+					primary.add(rpk.getString("COLUMN_NAME"));
+				
 				Data columns = Data.list();
-				while( r.next() )
+				do
 				{
 					columns.add(Data.map()
 						.put("name", r.getString("COLUMN_NAME"))
@@ -435,7 +452,8 @@ public class Database extends Item<Database.Type>
 						.put("type", JDBCType.valueOf(r.getInt("DATA_TYPE")).getName())
 						.put("primary", primary.contains(r.getString("COLUMN_NAME")))
 					);
-				}
+				} while( r.next() );
+				
 				return columns;
 			}
 			catch(SQLException e)
