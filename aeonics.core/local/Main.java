@@ -38,8 +38,8 @@ import aeonics.manager.Lifecycle.Phase;
 
 public class Main extends Plugin
 {
-	public String summary() { return "Core System"; }
-	public String description() { return "Defines the default behavior of the system."; }
+	public String summary() { return "Core v1.0.0"; }
+	public String description() { return "Aeonics Core System"; }
 	
 	public Main()
 	{
