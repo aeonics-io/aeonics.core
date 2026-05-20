@@ -1,5 +1,8 @@
 package aeonics.entity.security;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import aeonics.data.Data;
@@ -143,7 +146,43 @@ public class User extends Item<User.Type>
 		}
 		
 		/**
-		 * Returns the user attributes
+		 * Returns a list of role names for this user.
+		 * If a role in inherited by a group membership, it is included in the list.
+		 * The returned list is a shallow copy, modifications will not be reflected.
+		 * @return the list of role names for this user.
+		 */
+		public Set<String> roles()
+		{
+			HashSet<String> names = new HashSet<>();
+			
+			for( Tuple<Entity, Data> r : relations("roles") )
+				names.add(r.a.name());
+			
+			for( Tuple<Entity, Data> g : relations("groups") )
+				for( Tuple<Entity, Data> r : g.a.relations("roles") )
+					names.add(r.a.name());
+			
+			return names;
+		}
+		
+		/**
+		 * Returns a list of group names for this user.
+		 * The returned list is a shallow copy, modifications will not be reflected.
+		 * @return the list of group names for this user.
+		 */
+		public Set<String> groups()
+		{
+			HashSet<String> names = new HashSet<>();
+			
+			for( Tuple<Entity, Data> g : relations("groups") )
+				names.add(g.a.name());
+			
+			return names;
+		}
+		
+		/**
+		 * Returns the user attributes.
+		 * The returned object is passed reference, modifications will be reflected on the user.
 		 * @return the user attributes
 		 */
 		public Data attributes()
