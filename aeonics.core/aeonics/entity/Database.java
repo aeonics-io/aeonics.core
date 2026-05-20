@@ -24,6 +24,7 @@ import aeonics.manager.Monitor;
 import aeonics.template.Item;
 import aeonics.template.Parameter;
 import aeonics.template.Template;
+import aeonics.util.Functions.Consumer;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
 
@@ -503,20 +504,31 @@ public class Database extends Item<Database.Type>
 		/**
 		 * Sets the process function as an alternative to {@link #connection()}.
 		 * @param <T> this
-		 * @param connecter the connection supplier
+		 * @param connector the connection supplier
 		 * @return this
 		 */
 		@SuppressWarnings("unchecked")
-		public <T extends Database.Type> T connection(Supplier<PooledConnection> connecter) { this.connection = connecter; return (T) this; }
+		public <T extends Database.Type> T connection(Supplier<PooledConnection> connector) { this.connection = connector; return (T) this; }
 		
 		/**
 		 * Returns a new connection to the database.
 		 * This method will be called on-demand as part of the connection pool.
+		 * The connection is marked as auto-commit.
 		 * @return a new connection to the database
 		 */
 		protected PooledConnection connection()
 		{
-			if( connection != null ) return connection.get();
+			if( connection != null )
+			{
+				PooledConnection c = connection.get();
+				try { c.connection.setAutoCommit(true); }
+				catch(Exception e)
+				{
+					c.destroy();
+					return null;
+				}
+				return c;
+			}
 			else return null;
 		}
 		
@@ -613,14 +625,7 @@ public class Database extends Item<Database.Type>
 		 * If a timeout occurs, an SQLException is thrown.
 		 * 
 		 * <p>It is always preferable to use the {@link #query(String, Object...)} method unless you need to group a set of queries together
-		 * as a transaction. In this case, you should use this method in a <b>try...with</b> statement:</p>
-		 * 
-		 * <pre>
-		 * try( PooledConnection c = next(-1) )
-		 * {
-		 *     ...
-		 * }
-		 * </pre>
+		 * as a transaction. In this case, you should use {@link #transaction(Consumer)}</p>
 		 * 
 		 * @param timeout the maximum number of milliseconds to wait for a connection to be available. A negative value means wait forever.
 		 * @return the next available connection
@@ -781,6 +786,58 @@ public class Database extends Item<Database.Type>
 			}
 			finally
 			{
+				Manager.of(Monitor.class).count(this, "time", System.nanoTime() - start);
+			}
+		}
+		
+		/**
+		 * Group a series of operations in a SQL transaction.
+		 * On successful completion, the transaction is committed automatically.
+		 * On failure (throw), the transaction is rolled back automatically.
+		 * <p><b>You MUST use the passed connection to perform the queries, not the database object itself.</b></p>
+		 * 
+		 * <pre>
+		 * Database db = ...;
+		 * db.transaction(tx -> {
+		 *     tx.query("...");
+		 *     tx.query("...");
+		 *     tx.query("...");
+		 * });
+		 * </pre>
+		 * 
+		 * @param operations the function to run operations, it accepts the single connection to query against.
+		 * @throws SQLException if an error happens
+		 * @throws InterruptedException if the transation was interrupted or could not start in due time
+		 */
+		public void transaction(Consumer<PooledConnection> operations) throws SQLException, InterruptedException
+		{
+			long start = System.nanoTime();
+			PooledConnection c = next(-1);
+			
+			try { c.connection.setAutoCommit(false); }
+			catch(Exception x) { c.destroy(); }
+			
+			try
+			{
+				operations.accept(c);
+				c.connection.commit();
+			}
+			catch(SQLException e)
+			{
+				c.connection.rollback();
+				throw e;
+			}
+			catch(Exception e)
+			{
+				c.connection.rollback();
+				throw new SQLException(e);
+			}
+			finally
+			{
+				try { c.connection.setAutoCommit(true); }
+				catch(Exception x) { c.destroy(); }
+				
+				c.close(); // return the connection to the pool
 				Manager.of(Monitor.class).count(this, "time", System.nanoTime() - start);
 			}
 		}
