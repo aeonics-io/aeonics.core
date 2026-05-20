@@ -524,6 +524,7 @@ public class StringUtils
 		if( s == null || s.length() == 0 ) return false;
 		
 		boolean point = false;
+		boolean e = false;
 		int cp = 0;
 		int i = 0;
 		if( s.codePointAt(0) == '-' ) i++;
@@ -534,6 +535,11 @@ public class StringUtils
 			{
 				if( point ) return false;
 				point = true;
+			}
+			else if( cp == 'e' || cp == 'E' )
+			{
+				if( e ) return false;
+				e = true;
 			}
 			else if( cp < '0' || cp > '9' )
 				return false;
