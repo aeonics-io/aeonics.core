@@ -60,7 +60,7 @@ public class Role extends Item<Role.Type>
 				.rule(Parameter.Rule.JSON_MAP)
 				.format(Parameter.Format.JSON)
 				.optional(true)
-				.defaultValue(Data.map())
+				.defaultValue(() -> Data.map())
 				.validator((v) -> v != null && (v.isMap() || Json.decode(v.asString()).isMap())))
 			;
 	}

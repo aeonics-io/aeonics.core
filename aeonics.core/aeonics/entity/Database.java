@@ -582,7 +582,7 @@ public class Database extends Item<Database.Type>
 		@Internal
 		public void refreshPoolSize()
 		{
-			int value = size();
+			int value = Math.max(1, size());
 			int size = permits.size();
 			
 			if( value == size ) // equal : do nothing
@@ -594,6 +594,8 @@ public class Database extends Item<Database.Type>
 			}
 			else // smaller : reduce and cleanup
 			{
+				if( value <= 0 ) throw new IllegalArgumentException("Cannot reduce pool size of " + size + " to " + value);
+				
 				permits.size = value;
 				permits.reduceBy(size-value);
 				

@@ -17,6 +17,7 @@ import aeonics.manager.Vault;
 import aeonics.util.Documented;
 import aeonics.util.Exportable;
 import aeonics.util.Functions.Predicate;
+import aeonics.util.Functions.Supplier;
 import aeonics.util.Internal;
 import aeonics.util.StringUtils;
 
@@ -179,21 +180,44 @@ public class Parameter implements Documented
 	public <P extends Parameter> P validator(Predicate<Data> value) { this.validator = value; return (P)this; }
 	
 	/**
-	 * The default value
+	 * The default value supplier
 	 */
-	private Data defaultValue = null;
+	private Supplier<Object> defaultValueSupplier = null;
+	
 	/**
 	 * Returns the default value of this parameter
-	 * @return the default value of this parameter
+	 * @return the default value of this parameter, or null if no default value
 	 */
-	public Data defaultValue() { return defaultValue; }
+	public Data defaultValue()
+	{
+		try
+		{
+			if( defaultValueSupplier == null ) return null;
+			return Data.of(defaultValueSupplier.get());
+		}
+		catch(Exception e)
+		{
+			Manager.of(Logger.class).finer(Parameter.class, e);
+			return null;
+		}
+	}
 	/**
 	 * Defines an optional default value for this parameter.
+	 * CAUTION: use this method only for scalar values because the default value will be shared 
+	 * for all instances of this parameter (i.e. for all entities).
+	 * You should use the {@link #defaultValue(Supplier)} method to provide a unique object.
 	 * @param <P> this parameter type
 	 * @param value the default value
 	 * @return this
 	 */
-	public <P extends Parameter> P defaultValue(Object value) { defaultValue = Data.of(value); return (P)this; }
+	public <P extends Parameter> P defaultValue(Object value) { defaultValueSupplier = () -> value; return (P)this; }
+	/**
+	 * Defines an optional default value supplier for this parameter.
+	 * @param <P> this parameter type
+	 * @param value the default value
+	 * @return this
+	 */
+	public <P extends Parameter> P defaultValue(Supplier<Object> supplier) { defaultValueSupplier = supplier; return (P)this; }
 	
 	/**
 	 * The binding pattern
@@ -210,13 +234,13 @@ public class Parameter implements Documented
 	@Internal
 	public Data resolve(Data value, Data context)
 	{
-		if( value == null || value.isEmpty() )
+		if( value == null || value.isNull() )
 		{
 			Data v = defaultValue(); 
 			if( v == null ) return Data.empty();
 			else value = v;
 		}
-		if( value.isEmpty() || !bindable() || !value.isString() ) return value;
+		if( value.isNull() || !bindable() || !value.isString() ) return value;
 		
 		StringBuilder sb = new StringBuilder();
 		Matcher matcher = bindingPattern.matcher(value.asString());

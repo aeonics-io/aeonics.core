@@ -58,7 +58,7 @@ public class Group extends Item<Group.Type>
 			.add(new Parameter("attributes")
 				.summary("Attributes")
 				.description("Additional group attributes that all users of this group shall inherit.")
-				.defaultValue(Data.map())
+				.defaultValue(() -> Data.map())
 				.format(Parameter.Format.JSON)
 				.rule(Parameter.Rule.JSON_MAP)
 				.optional(true)

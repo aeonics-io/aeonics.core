@@ -1,7 +1,6 @@
 package aeonics.entity;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -204,7 +203,7 @@ public class Entity implements Exportable, Snapshotable
 	/**
 	 * The list of parameters and their raw value.
 	 */
-	private Map<String, Tuple<Data, Parameter>> parameters = new HashMap<String, Tuple<Data, Parameter>>();
+	private Map<String, Tuple<Data, Parameter>> parameters = new ConcurrentHashMap<String, Tuple<Data, Parameter>>();
 	
 	/**
 	 * Returns the list of parameters of this entity instance.
@@ -267,6 +266,7 @@ public class Entity implements Exportable, Snapshotable
 	{
 		Tuple<Data, Parameter> t = parameters().get(parameter);
 		if( t == null ) return Data.empty();
+		if( t.a == null || t.a.isNull() ) t.a = t.b.defaultValue();
 		if( t.b.format().equals(Parameter.Format.JSON) && t.a.isString() )
 			t.a = Json.decode(t.a.asString());
 		if( !t.b.bindable() ) return t.a;
