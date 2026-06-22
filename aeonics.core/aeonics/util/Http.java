@@ -217,7 +217,8 @@ public class Http
 			connection = (HttpURLConnection)u.openConnection();
 			connection.setRequestMethod(method);
 			connection.setDoOutput(true);
-			connection.setConnectTimeout(CONNECT_TIMEOUT);
+			connection.setConnectTimeout(Math.max(timeout, CONNECT_TIMEOUT));
+			if( timeout > 0 ) connection.setReadTimeout(timeout);
 			connection.setInstanceFollowRedirects(true);
 			
 			if( connection instanceof HttpsURLConnection )
