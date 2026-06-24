@@ -98,7 +98,7 @@ public abstract class Security extends Manager.Type
 		try
 		{
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
-			byte[] hash = md.digest(value);
+			byte[] hash = md.digest(value == null ? new byte[0] : value);
 			char[] hex = new char[hash.length * 2];
 			for( int i = 0; i < hash.length; i++ )
 			{
