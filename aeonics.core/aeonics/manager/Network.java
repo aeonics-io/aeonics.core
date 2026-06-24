@@ -675,6 +675,18 @@ public abstract class Network extends Manager.Type
 	}
 	
 	/**
+	 * Shared strong random source for TLS contexts.
+	 * SecureRandom is thread safe but {@link SecureRandom#getInstanceStrong()} performs
+	 * a provider lookup and creates a new instance on every call.
+	 */
+	private static final SecureRandom STRONG_RANDOM;
+	static
+	{
+		try { STRONG_RANDOM = SecureRandom.getInstanceStrong(); }
+		catch(Exception e) { throw new ExceptionInInitializerError(e); }
+	}
+
+	/**
 	 * Returns an ssl context that matches the provided security options
 	 * @param options the security options (may be null)
 	 * @param clientMode whether or not the role is client (or otherwise server)
@@ -687,7 +699,7 @@ public abstract class Network extends Manager.Type
 			KeyManager[] km = new KeyManager[] { keyManager(options, clientMode) };
 			TrustManager[] tm = new TrustManager[] { trustManager(options) };
 			SSLContext tls = SSLContext.getInstance("TLS");
-			tls.init(km, tm, SecureRandom.getInstanceStrong());
+			tls.init(km, tm, STRONG_RANDOM);
 			return tls;
 		}
 		catch(Exception e)
