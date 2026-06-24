@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
@@ -14,9 +15,11 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SNIHostName;
@@ -44,11 +47,88 @@ public class Http
 	 */
 	public static SSLContext mTLS(String clientCertificate, String clientKey, String serverCertificate) throws Exception
 	{
-		final X509Certificate trusted = Network.SecurityOptions.certificate(serverCertificate);
-		
 		return Network.sslContext(new Network.SecurityOptions()
 			.withClientCertificate(clientCertificate, clientKey)
-			.withServerVerifier(cert ->
+			.withServerVerifier(pinned(serverCertificate)), true);
+	}
+
+	/**
+	 * Returns an SSLContext that authenticates the server against the provided certificate, without client authentication.
+	 * The server is trusted if it presents the provided certificate, or a certificate issued by it.
+	 * The provided certificate is the sole trust anchor and the hostname is not checked,
+	 * which makes this method suitable for servers using a self-signed certificate.
+	 * @param serverCertificate the server certificate (or signing authority) to authenticate the server as PEM format
+	 * @return a server-pinning SSLContext
+	 * @throws Exception in case of invalid parameters
+	 */
+	public static SSLContext trust(String serverCertificate) throws Exception
+	{
+		return Network.sslContext(new Network.SecurityOptions()
+			.withServerVerifier(pinned(serverCertificate)), true);
+	}
+
+	/**
+	 * Returns an SSLContext that accepts any server certificate without verification.
+	 * <p><b>Caution:</b> the connection is encrypted but the remote server is <b>not</b> authenticated:
+	 * anyone able to intercept the traffic can impersonate the server and read the request, including its headers and body.
+	 * Use {@link #trust(String)} or {@link #mTLS(String, String, String)} whenever the server certificate is known.
+	 * This method is intended for the rare cases where no trust anchor exists yet,
+	 * such as fetching the certificate of a remote server for the first time.</p>
+	 * @return a permissive SSLContext
+	 */
+	public static SSLContext trustAll()
+	{
+		return Network.sslContext(null, true);
+	}
+
+	/**
+	 * Connects to the specified server and returns the certificate it presents, as PEM format.
+	 * <p><b>Caution:</b> the certificate is <b>not</b> verified, so the result should only be trusted
+	 * if the network path to the server is. This method is meant to capture the certificate of a
+	 * freshly deployed server once, in order to pin it in subsequent requests using {@link #trust(String)}.</p>
+	 * @param host the server host name or IP address
+	 * @param port the server port
+	 * @return the server certificate as PEM format
+	 * @throws Exception if the server cannot be reached or the TLS handshake fails
+	 */
+	public static String certificate(String host, int port) throws Exception
+	{
+		SSLSocketFactory factory = trustAll().getSocketFactory();
+		try( SSLSocket socket = (SSLSocket) factory.createSocket() )
+		{
+			socket.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT);
+			socket.setSoTimeout(CONNECT_TIMEOUT);
+
+			try
+			{
+				SSLParameters sni = new SSLParameters();
+				sni.setServerNames(List.of(new SNIHostName(host)));
+				socket.setSSLParameters(sni);
+			}
+			catch(IllegalArgumentException e) { /* IP literals cannot be used as SNI */ }
+
+			socket.startHandshake();
+			X509Certificate cert = (X509Certificate) socket.getSession().getPeerCertificates()[0];
+			return "-----BEGIN CERTIFICATE-----\n"
+				+ Base64.getMimeEncoder(64, new byte[] { '\n' }).encodeToString(cert.getEncoded())
+				+ "\n-----END CERTIFICATE-----";
+		}
+	}
+
+	/**
+	 * Returns a verifier that accepts the server certificate if it is the trusted certificate,
+	 * or if the trusted certificate is a signing authority that issued it.
+	 * @param serverCertificate the trusted certificate (or signing authority) as PEM format
+	 * @return the matching verifier
+	 * @throws Exception in case of invalid certificate
+	 */
+	private static Consumer<X509Certificate> pinned(String serverCertificate) throws Exception
+	{
+		final X509Certificate trusted = Network.SecurityOptions.certificate(serverCertificate);
+
+		return new Consumer<X509Certificate>()
+		{
+			public void accept(X509Certificate cert)
 			{
 				try
 				{
@@ -57,8 +137,8 @@ public class Http
 					if( trusted.getBasicConstraints() >= 0 ) // trusted is a CA that can issue the server certificate
 					{
 						boolean[] keyUsage = trusted.getKeyUsage();
-			            boolean hasKeyCertSign = keyUsage == null || (keyUsage.length > 5 && keyUsage[5]);
-						
+						boolean hasKeyCertSign = keyUsage == null || (keyUsage.length > 5 && keyUsage[5]);
+
 						if( hasKeyCertSign )
 						{
 							cert.verify(trusted.getPublicKey());
@@ -71,7 +151,8 @@ public class Http
 				{
 					throw new RuntimeException();
 				}
-			}), true);
+			}
+		};
 	}
 	
 	private static SSLSocketFactory __bugfix(final SSLSocketFactory f, final String host)
@@ -195,7 +276,8 @@ public class Http
 	 * @param headers the http request headers
 	 * @param method the http method
 	 * @param timeout the request timeout in milliseconds. 0 means infinite.
-	 * @param context the SSL context to be used (can be null for permissive defaults)
+	 * @param context the SSL context to be used, such as {@link #trust(String)}, {@link #mTLS(String, String, String)} or {@link #trustAll()}.
+	 * If null, the server certificate is verified against the system trust store and the hostname is checked.
 	 * @return the response
 	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
 	 */
@@ -223,17 +305,19 @@ public class Http
 			
 			if( connection instanceof HttpsURLConnection )
 			{
+				// with an explicit context, the verifier is the trust anchor so the hostname check is disabled.
+				// with no context, the platform defaults apply: system trust store and hostname verification.
 				if( context != null )
+				{
 					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(context.getSocketFactory(), u.getHost()));
-				else
-					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(Network.sslContext(null, true).getSocketFactory(), u.getHost()));
-				((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
+					((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
+				}
 			}
-			
+
 			for( Map.Entry<String, Data> h : headers.entrySet() )
 				connection.setRequestProperty(h.getKey(), h.getValue().asString());
 			connection.setRequestProperty("Connection", "close");
-			
+
 			ByteArrayOutputStream content = new ByteArrayOutputStream();
 			switch(headers.asString("Content-Type") )
 			{
@@ -388,7 +472,8 @@ public class Http
 	 * @param headers the http request headers
 	 * @param method the http method
 	 * @param timeout the request timeout in milliseconds. 0 means infinite.
-	 * @param context the SSL context to be used (can be null for permissive defaults)
+	 * @param context the SSL context to be used, such as {@link #trust(String)}, {@link #mTLS(String, String, String)} or {@link #trustAll()}.
+	 * If null, the server certificate is verified against the system trust store and the hostname is checked.
 	 * @return the response
 	 * @throws Http.Error if the remote endpoint returns an error (http code 400+)
 	 */
@@ -432,17 +517,19 @@ public class Http
 			
 			if( connection instanceof HttpsURLConnection )
 			{
+				// with an explicit context, the verifier is the trust anchor so the hostname check is disabled.
+				// with no context, the platform defaults apply: system trust store and hostname verification.
 				if( context != null )
+				{
 					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(context.getSocketFactory(), u.getHost()));
-				else
-					((HttpsURLConnection)connection).setSSLSocketFactory(__bugfix(Network.sslContext(null, true).getSocketFactory(), u.getHost()));
-				((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
+					((HttpsURLConnection)connection).setHostnameVerifier((h, s) -> true);
+				}
 			}
-			
+
 			for( Map.Entry<String, Data> h : headers.entrySet() )
 				connection.setRequestProperty(h.getKey(), h.getValue().asString());
 			connection.setRequestProperty("Connection", "close");
-			
+
 			int code = connection.getResponseCode();
 			if( code < 0 || code >= 400 )
 			{
