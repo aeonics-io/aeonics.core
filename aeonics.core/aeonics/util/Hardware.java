@@ -105,7 +105,7 @@ public class Hardware
 				if( limit > 0 ) return limit;
 				
 				String value = null;
-				if( Manager.of(Config.class) != null ) value = Manager.of(Config.class).get("AEONICS_HARDWARE_CPU_LIMIT").asString();
+				if( Manager.of(Config.class) != null ) value = Manager.of(Config.class).get("AEONICS_HARDWARE_CPU:LIMIT").asString();
 				if( value == null || value.isBlank() ) value = System.getProperty("AEONICS_HARDWARE_CPU_LIMIT");
 				if( value == null || value.isBlank() ) value = System.getenv("AEONICS_HARDWARE_CPU_LIMIT");
 				if( value == null || value.isBlank() ) value = "" + Runtime.getRuntime().availableProcessors();

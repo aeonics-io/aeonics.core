@@ -242,8 +242,12 @@ public class Parameter implements Documented
 		}
 		if( value.isNull() || !bindable() || !value.isString() ) return value;
 		
+		// cheap check for bindable before the expensive regexp
+		String literal = value.asString();
+		if( literal.indexOf("${") < 0 ) return value;
+		
 		StringBuilder sb = new StringBuilder();
-		Matcher matcher = bindingPattern.matcher(value.asString());
+		Matcher matcher = bindingPattern.matcher(literal);
 		while( matcher.find() )
 		{
 			String name = matcher.group(2);
