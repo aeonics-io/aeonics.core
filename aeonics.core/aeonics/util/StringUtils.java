@@ -186,6 +186,8 @@ public class StringUtils
 	 * If multiple wildcard characters follow each other, they are ignored.</li>
 	 * <li>If any of the subject or pattern is null, then it is never a match</li>
 	 * <li>An empty word is valid except at the beginning or the end in which case they are trimmed.</li>
+	 * <li>A subject left with no word at all is matched only by a pattern that requires none,
+	 * that is an equally empty pattern or a global wildcard. A word wildcard always demands a word.</li>
 	 * </ul>
 	 * @param subject the subject to match
 	 * @param pattern the matching rule
@@ -228,6 +230,8 @@ public class StringUtils
 	 * If multiple wildcard characters follow each other, they are ignored.</li>
 	 * <li>If any of the subject or pattern is null, then it is never a match</li>
 	 * <li>An empty word is valid except at the beginning or the end in which case they are trimmed.</li>
+	 * <li>A subject left with no word at all is matched only by a pattern that requires none,
+	 * that is an equally empty pattern or a global wildcard. A word wildcard always demands a word.</li>
 	 * </ul>
 	 * @param subject the subject to match
 	 * @param pattern the matching rule
@@ -247,10 +251,10 @@ public class StringUtils
 		if( pattern != null && pattern.length() > 0 && inArray(negators, pattern.charAt(0)) ) { pattern_index = 1; invert = true; }
 
 		// ====================
-		// 2. in case any of them are null or empty
+		// 2. in case any of them are null
+		// the empty checks happen after trimming, in step 5
 		if( pattern == null || subject == null ) return false;
 		int pattern_size = pattern.length(), subject_size = subject.length();
-		if( pattern_size == pattern_index ) return (invert ? subject_size > 0 : subject_size == 0);
 		
 		char p, s;
 		
@@ -286,8 +290,19 @@ public class StringUtils
 		
 		// ====================
 		// 5. quick checks
-		if( pattern_size == pattern_index ) return (invert ? subject_size > 0 : subject_size == 0);
-		if( pattern_size == subject_size && pattern.equals(subject) ) return (invert ? false : true);
+		// the trimming above moves the boundaries instead of the string, so emptiness
+		// is the span being empty, never the size being zero
+		if( pattern_size == pattern_index ) return (invert ? subject_index < subject_size : subject_index == subject_size);
+		if( subject_size == subject_index )
+		{
+			// there is no word at all left to match, and only a global wildcard matches nothing
+			if( inArray(globalWildcards, pattern.charAt(pattern_index)) ) return (invert ? false : true);
+			return (invert ? true : false);
+		}
+		// compared on the spans, so that the leading negator is not part of the subject
+		if( pattern_size - pattern_index == subject_size - subject_index
+			&& pattern.regionMatches(pattern_index, subject, subject_index, pattern_size - pattern_index) )
+			return (invert ? false : true);
 		
 		for( ; pattern_index < pattern_size && subject_index < subject_size; subject_index++ )
 		{

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -266,10 +267,20 @@ public class Template<T extends Entity> implements Documented
 	public <U extends Template<T>> U type(Class<? extends Item<? super T>> value) { type = value; return (U) this; }
 	
 	/**
-	 * Creates a new template for the specified target entity in the specified category.
-	 * A default {@link Parameter} `name` is automatically added.
+	 * Creates a new template for the specified target entity in the specified category
+	 * and registers it in the {@link Factory}.
+	 *
+	 * <p>A template is keyed by its {@link #type()}, never by its {@link #target()}, so
+	 * constructing another template with the same category and type replaces this one.
+	 * That is how an implementation is transparently substituted: entities and their
+	 * snapshots record the type, so data captured before the substitution restores into
+	 * the new target.</p>
+	 *
+	 * <p>Two entities that are not interchangeable must therefore never share a type,
+	 * or a restore hands back whichever template was registered last.</p>
+	 *
 	 * <p>You should only use this constructor if the target is a substitute for the specified type.</p>
-	 * @param target the target entity type. It is the entity instance to create. It must match the {@link #creator(Supplier)} and be the same as (or a sybtype of) the type parameter.
+	 * @param target the target entity type. It is the entity instance to create. It must match the {@link #creator(Supplier)} and be the same as (or a subtype of) the type parameter.
 	 * @param type the entity supertype. It is the desired entity type as registered in the Factory. See {@link Factory#get(String)}.
 	 * @param category the entity category. It is the entity category as registered in the Factory and Registry. See {@link Factory#of(String)} and {@link Registry#of(String)}.
 	 */
@@ -374,6 +385,17 @@ public class Template<T extends Entity> implements Documented
 	/**
 	 * Creates a new entity instance and sets the basic properties and relationships.
 	 * If a custom builder is set, it is then called.
+	 *
+	 * <p>The instance takes the <code>id</code> of the input data, or a generated one when
+	 * absent, and its <code>name</code>, or <code>&lt;target class&gt;-&lt;id&gt;</code> when
+	 * absent. The name is a property of the entity, not a {@link Parameter}. The instance
+	 * takes the {@link #category()} and {@link #type()} of this template regardless of the
+	 * target implementation, and is added to the {@link Registry} before the creation
+	 * callbacks run.</p>
+	 *
+	 * <p>When the data carries a <code>mode</code>, <code>category</code> or
+	 * <code>type</code>, as snapshot and export data do, each is required to match this
+	 * template, so a payload can never be restored by the wrong one.</p>
 	 * @param data the user input data
 	 * @return an instance of the target entity
 	 * @throws RuntimeException if an error happens during initialization
@@ -505,6 +527,14 @@ public class Template<T extends Entity> implements Documented
 	 * Although, the entity might need to be notified about the change if necessary.
 	 * If a custom modifier is set, it is called after updating the parameters and relationships.
 	 * If the entity cannot be updated, override this method and throw an exception instead.
+	 *
+	 * <p>Only the keys present in the input are considered: a parameter that is absent keeps its
+	 * current value, while a relationship that is present replaces the whole set of relations of
+	 * that name. The identity is never modified, so an <code>id</code>, <code>category</code>,
+	 * <code>type</code> or <code>internal</code> entry is ignored rather than refused.</p>
+	 *
+	 * <p>The whole input is validated before anything is applied, so an update that throws leaves
+	 * the entity untouched.</p>
 	 * @param data the new user input data
 	 * @param instance the existing instance to modify
 	 * @return the modified instance
@@ -513,49 +543,45 @@ public class Template<T extends Entity> implements Documented
 	public T update(Data data, T instance)
 	{
 		if( data == null || !data.isMap() || data.isEmpty() || instance == null ) return instance;
-		
-		if( data.containsKey("name") )
-			instance.name(data.asString("name"));
-		
+
 		Data data_parameters;
 		if( data.containsKey("parameters") && !data.isNull("parameters") ) data_parameters = data.get("parameters");
 		else data_parameters = Data.map();
 		if( !data_parameters.isMap() )
 			throw new RuntimeException("Invalid entity parameters");
-		
+
+		Data data_relationships;
+		if( data.containsKey("relationships") && !data.isNull("relationships") ) data_relationships = data.get("relationships");
+		else data_relationships = Data.map();
+		if( !data_relationships.isMap() )
+			throw new RuntimeException("Invalid entity relationships");
+
+		Map<Parameter, Data> values = new LinkedHashMap<>();
 		for( Parameter p : parameters.values() )
 		{
 			if( !data_parameters.containsKey(p.name()) ) continue;
-			
+
 			Data value = data_parameters.get(p.name());
 			if( enforceParameterValidation() && !p.validate(value) )
 				throw new RuntimeException("Invalid value for parameter " + p.name());
 
 			if( p.format().equals(Parameter.Format.JSON) && value.isString() )
 				value = Json.decode(value.asString());
-			
-			Tuple<Data, Parameter> t = instance.parameters().get(p.name());
-			if( t == null ) instance.parameters().put(p.name(), Tuple.of(value, p));
-			else t.a = value;
+
+			values.put(p, value);
 		}
-		
-		Data data_relationships;
-		if( data.containsKey("relationships") && !data.isNull("relationships") ) data_relationships = data.get("relationships");
-		else data_relationships = Data.map();
-		if( !data_relationships.isMap() )
-			throw new RuntimeException("Invalid entity relationships");
-		
+
+		Map<Relationship, Data> links = new LinkedHashMap<>();
 		for( Relationship r : relationships.values() )
 		{
 			if( !data_relationships.containsKey(r.name()) ) continue;
-			
-			instance.clearRelation(r.name());
+
 			Data rels = data_relationships.get(r.name());
 			if( !rels.isList() ) rels = Data.list().add(rels);
-			
+
 			if( (r.min() > 0 && rels.size() < r.min()) || (r.max() > 0 && rels.size() > r.max()) )
 				throw new RuntimeException("Invalid count for relationship " + r.name());
-			
+
 			for( Data link : rels )
 			{
 				for( Parameter p : r.parameters().values() )
@@ -567,10 +593,28 @@ public class Template<T extends Entity> implements Documented
 					if( p.format().equals(Parameter.Format.JSON) && value.isString() )
 						link.put(p.name(), Json.decode(value.asString()));
 				}
-				instance.addUncheckedRelation(r.name(), link.asString("id"), link);
 			}
+
+			links.put(r, rels);
 		}
-		
+
+		if( data.containsKey("name") )
+			instance.name(data.asString("name"));
+
+		for( Map.Entry<Parameter, Data> value : values.entrySet() )
+		{
+			Tuple<Data, Parameter> t = instance.parameters().get(value.getKey().name());
+			if( t == null ) instance.parameters().put(value.getKey().name(), Tuple.of(value.getValue(), value.getKey()));
+			else t.a = value.getValue();
+		}
+
+		for( Map.Entry<Relationship, Data> link : links.entrySet() )
+		{
+			instance.clearRelation(link.getKey().name());
+			for( Data one : link.getValue() )
+				instance.addUncheckedRelation(link.getKey().name(), one.asString("id"), one);
+		}
+
 		// set the temporary instance for the callback
 		current.set(instance);
 		

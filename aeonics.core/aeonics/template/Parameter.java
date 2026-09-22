@@ -213,8 +213,10 @@ public class Parameter implements Documented
 	public <P extends Parameter> P defaultValue(Object value) { defaultValueSupplier = () -> value; return (P)this; }
 	/**
 	 * Defines an optional default value supplier for this parameter.
+	 * <p>The supplier is called on every read, so it is the way to give each entity its own
+	 * default object rather than the shared one of {@link #defaultValue(Object)}.</p>
 	 * @param <P> this parameter type
-	 * @param value the default value
+	 * @param supplier the default value supplier
 	 * @return this
 	 */
 	public <P extends Parameter> P defaultValue(Supplier<Object> supplier) { defaultValueSupplier = supplier; return (P)this; }
@@ -293,17 +295,26 @@ public class Parameter implements Documented
 	}
 	
 	/**
-	 * Whether or not this parameter allows empty values
+	 * Whether or not an empty value bypasses validation
 	 */
 	private boolean optional = false;
 	/**
-	 * Returns whether or not this parameter allows empty values
-	 * @return true if this parameter allows empty values
+	 * Returns whether or not an empty value bypasses validation.
+	 * @see #optional(boolean)
+	 * @return true if an empty value is accepted without any further check
 	 */
 	public boolean optional() { return optional; }
 	/**
-	 * Sets whether or not this parameter allows empty values
-	 * @param value whether or not this parameter allows empty values
+	 * Sets whether or not an empty value bypasses validation.
+	 *
+	 * <p>When true, an empty value is accepted immediately and none of the other checks apply.
+	 * When false, an empty value goes through the same checks as any other value, and is therefore
+	 * still rejected by {@link #min(int)}, {@link #values(String...)} or {@link #rule(Predicate)}
+	 * whenever they do not accept it.</p>
+	 *
+	 * <p>This is not a mandatory flag: an otherwise unconstrained parameter accepts an empty value
+	 * whether it is optional or not. Requiring a value is expressed with <code>min(1)</code>.</p>
+	 * @param value whether or not an empty value bypasses validation
 	 * @return this
 	 */
 	public Parameter optional(boolean value) { this.optional = value; return this; }

@@ -248,7 +248,6 @@ public abstract class Policy extends Item<Policy.Type>
 		public Template<? extends TargetedPolicy.Type> template()
 		{
 			return (Template<TargetedPolicy.Type>) super.template()
-				.type(TargetedPolicy.class)
 				.add(new Relationship("users")
 					.category(User.class)
 					.summary("Users")

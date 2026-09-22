@@ -237,8 +237,9 @@ public class Registry<T extends Entity> implements Iterable<T>, Exportable
 	{
 		if( id == null || id.isBlank() ) return null;
 		T entity = entities.get(id);
-		if( entity != null && !entity.internal() )
+		if( entity != null )
 		{
+			if( entity.internal() ) return null;
 			entities.remove(id, entity);
 			onRemove().trigger(entity);
 			return closeIfCloseable((U) entity);
